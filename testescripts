@@ -274,7 +274,6 @@ TabCombat:CreateSlider({
 -- PARTE 2: PLATAFORMA + DESCIDA (AGORA NA ABA COMBAT)
 -----------------------------------------------------------
 TabCombat:CreateSection(".")
-
 local ativadoDescida = false
 local plataformaGigante = nil
 local connectionNoClip = nil
@@ -426,6 +425,7 @@ local function CriarInterfacePlataforma()
         end
     end)
 end
+TabCombat:CreateSection(".")
 
 TabCombat:CreateToggle({
    Name = "Descida + Plataforma",
