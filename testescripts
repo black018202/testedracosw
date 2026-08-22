@@ -247,7 +247,7 @@ TabCombat:CreateKeybind({
 })
 
 TabCombat:CreateSlider({
-   Name = "Speed tween autobat",
+   Name = "Speed Tween Autobat",
    Range = {10, 100},
    Increment = 1,
    Suffix = " Speed",
@@ -259,7 +259,7 @@ TabCombat:CreateSlider({
 })
 
 TabCombat:CreateSlider({
-   Name = "tween studs",
+   Name = "Tween Studs",
    Range = {1, 10},
    Increment = 1,
    Suffix = " Studs",
