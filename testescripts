@@ -273,6 +273,8 @@ TabCombat:CreateSlider({
 -----------------------------------------------------------
 -- PARTE 2: PLATAFORMA + DESCIDA (AGORA NA ABA COMBAT)
 -----------------------------------------------------------
+TabConfig:CreateSection(".")
+
 local ativadoDescida = false
 local plataformaGigante = nil
 local connectionNoClip = nil
