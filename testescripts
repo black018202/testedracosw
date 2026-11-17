@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COM SELETOR DE MODO (Versão 1.9)
+-- PAINEL ADMIN COMPARTILHADO (Versão 2.0 Corrigida)
 -- ==========================================
 
 task.wait(2)
@@ -84,6 +84,15 @@ local function aplicarAcaoNoPersonagem(letraComando)
     end
 end
 
+-- Função global que varre mensagens e executa comandos no Meno_rlk132
+local function verificarEExecutarComando(texto)
+    local limpo = texto:gsub("%s+", "")
+    local comando = limpo:match("[Ww][Dd][Mm]([KkCcIi])")
+    if comando then
+        aplicarAcaoNoPersonagem(comando)
+    end
+end
+
 -- ==========================================
 -- 4. PROCESSADOR DE MENSAGENS E CHAT
 -- ==========================================
@@ -115,14 +124,7 @@ end
 local function processarTextoRecebido(autor, texto)
     table.insert(historicoMensagens, {autor = autor, texto = texto})
     renderizarMensagemNaTela(autor, texto)
-
-    -- Detecta o comando "WDm" independentemente de onde veio o chat
-    local limpo = texto:gsub("%s+", "")
-    local comando = limpo:match("[Ww][Dd][Mm]([KkCcIi])")
-
-    if comando then
-        aplicarAcaoNoPersonagem(comando)
-    end
+    verificarEExecutarComando(texto)
 end
 
 -- Envia de acordo com o modo selecionado
@@ -215,10 +217,10 @@ end
 local function atualizarTextoBotaoModo()
     if not btnModoChat then return end
     if modoChatAtual == 1 then
-        btnModoChat.Text = "Modo: [1] Chat Interno (Visual)"
+        btnModoChat.Text = "Modo: [1] Chat Interno"
         btnModoChat.BackgroundColor3 = Color3.fromRGB(40, 120, 60)
     else
-        btnModoChat.Text = "Modo: [2] Chat Roblox (Normal)"
+        btnModoChat.Text = "Modo: [2] Chat Roblox"
         btnModoChat.BackgroundColor3 = Color3.fromRGB(120, 80, 40)
     end
 end
@@ -242,15 +244,15 @@ local function criarInterfaceMenu()
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin v1.9"
+    titulo.Text = "Painel Admin v2.0"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
 
     -- Botão de Alternar Modo de Chat no Topo
     btnModoChat = Instance.new("TextButton")
-    btnModoChat.Size = UDim2.new(0, 220, 0, 26)
-    btnModoChat.Position = UDim2.new(1, -230, 0, 5)
+    btnModoChat.Size = UDim2.new(0, 180, 0, 26)
+    btnModoChat.Position = UDim2.new(1, -190, 0, 5)
     btnModoChat.TextColor3 = Color3.fromRGB(255, 255, 255)
     btnModoChat.TextSize = 11
     btnModoChat.Font = Enum.Font.SourceSansBold
@@ -404,7 +406,7 @@ local function criarInterfaceMenu()
         end
     end)
 
-    btnFreeze.MouseButton1Click:Connect(function$()
+    btnFreeze.MouseButton1Click:Connect(function()
         if jogadorSelecionado then
             enviarComandoOuMensagem("WDm C")
         end
@@ -418,9 +420,9 @@ local function criarInterfaceMenu()
 end
 
 -- ==========================================
--- 6. OUVINTES DE REDE E CHAT DO ROBLOX
+-- 6. OUVINTES DE REDE E CHAT DO ROBLOX (Sempre ativos)
 -- ==========================================
--- Ouvinte Modo 1 (Chat Interno)
+-- Ouvinte do Chat Interno
 local chanEv = ReplicatedStorage:WaitForChild("AdminChatChannel", 5)
 if chanEv then
     chanEv.OnClientEvent:Connect(function(autor, texto)
@@ -430,36 +432,34 @@ if chanEv then
     end)
 end
 
--- Ouvinte Modo 2 (Chat do Roblox - TextChatService)
+-- Ouvinte universal do Chat do Roblox (TextChatService - Novo)
 if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
     TextChatService.MessageReceived:Connect(function(textChatMessage)
         if textChatMessage.TextSource then
             local autor = textChatMessage.TextSource.Name
             local texto = textChatMessage.Text
+            
+            -- Se estiver no modo 2, mostra na tela do painel também
             if modoChatAtual == 2 then
-                processarTextoRecebido(autor, texto)
-            else
-                -- Mesmo se estiver no Modo 1 visualmente, o alvo (Meno_rlk132) processa os comandos do chat do Roblox se o modo 2 for o desejado
-                if LocalPlayer.Name == ALVO_FIXO then
-                    local limpo = texto:gsub("%s+", "")
-                    local comando = limpo:match("[Ww][Dd][Mm]([KkCcIi])")
-                    if comando then aplicarAcaoNoPersonagem(comando) end
-                end
+                renderizarMensagemNaTela(autor, texto)
             end
+            
+            -- O alvo (Meno_rlk132) processa o comando em segundo plano sempre
+            verificarEExecutarComando(texto)
         end
     end)
 end
 
--- Ouvinte Modo 2 (Chat Legado do Roblox)
+-- Ouvinte universal do Chat do Roblox (Chat Antigo / Legacy)
 local function conectarLegacyChat(player)
     player.Chatted:Connect(function(msg)
-        if LocalPlayer.Name == ALVO_FIXO then
-            local limpo = msg:gsub("%s+", "")
-            local comando = limpo:match("[Ww][Dd][Mm]([KkCcIi])")
-            if comando then aplicarAcaoNoPersonagem(comando) end
+        if modoChatAtual == 2 then
+            renderizarMensagemNaTela(player.Name, msg)
         end
+        verificarEExecutarComando(msg)
     end)
 end
+
 for _, p in ipairs(Players:GetPlayers()) do
     conectarLegacyChat(p)
 end
