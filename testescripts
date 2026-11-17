@@ -1,6 +1,10 @@
 -- ==========================================
--- CONFIGURAÇÕES E VARIÁVEIS GLOBAIS (Versão 1.1)
+-- CONFIGURAÇÕES E VARIÁVEIS GLOBAIS (Versão 1.2)
 -- ==========================================
+
+-- Espera 3 segundos antes de iniciar o script normalmente
+task.wait(3)
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -85,12 +89,12 @@ local function criarInterfaceMenu()
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
 
-    -- Título com a Versão v1.1 ao lado
+    -- Título com a Versão v1.2 ao lado
     local titulo = Instance.new("TextLabel")
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin  |  v1.1"
+    titulo.Text = "Painel Admin  |  v1.2"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
