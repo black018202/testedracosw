@@ -1,5 +1,5 @@
 -- ==========================================
--- CONFIGURAÇÕES E VARIÁVEIS GLOBAIS
+-- CONFIGURAÇÕES E VARIÁVEIS GLOBAIS (Versão 1.1)
 -- ==========================================
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -22,6 +22,51 @@ if not remoteEvent then
 end
 
 -- ==========================================
+-- FUNÇÃO PARA ATUALIZAR A LISTA DE JOGADORES
+-- ==========================================
+local function atualizarListaJogadores()
+    if not listaJogadoresFrame then return end
+
+    -- Limpa os botões antigos para não duplicar
+    for _, child in ipairs(listaJogadoresFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    local yOffset = 0
+    local alturaItem = 35
+
+    -- Varre todos os jogadores do servidor atual
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local btnPlayer = Instance.new("TextButton")
+            btnPlayer.Size = UDim2.new(1, 0, 0, alturaItem - 5)
+            btnPlayer.Position = UDim2.new(0, 0, 0, yOffset)
+            btnPlayer.Text = player.Name
+            btnPlayer.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+            btnPlayer.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btnPlayer.TextSize = 12
+            btnPlayer.Parent = listaJogadoresFrame
+
+            -- Quando clica no jogador da lista, seleciona ele
+            btnPlayer.MouseButton1Click:Connect(function()
+                jogadorSelecionado = player
+                if labelSelecionado then
+                    labelSelecionado.Text = "Alvo: " .. player.Name
+                    labelSelecionado.TextColor3 = Color3.fromRGB(100, 255, 100)
+                end
+            end)
+
+            yOffset = yOffset + alturaItem
+        end
+    end
+
+    -- Ajusta o tamanho da barra de rolagem (ScrollingFrame) dinamicamente
+    listaJogadoresFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+end
+
+-- ==========================================
 -- 1. CRIANDO A INTERFACE (MENU LARGO E COM ROLAGEM)
 -- ==========================================
 local function criarInterfaceMenu()
@@ -40,12 +85,12 @@ local function criarInterfaceMenu()
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
 
-    -- Título
+    -- Título com a Versão v1.1 ao lado
     local titulo = Instance.new("TextLabel")
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin (Alt + W)"
+    titulo.Text = "Painel Admin  |  v1.1"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
@@ -126,7 +171,7 @@ local function criarInterfaceMenu()
     btnInverter.TextSize = 14
     btnInverter.Parent = painelAcoes
 
-    -- AÇÕES DOS BOTÕES
+    -- AÇÕES DOS BOTÕES DE COMANDO
     btnKill.MouseButton1Click:Connect(function()
         if jogadorSelecionado then
             remoteEvent:FireServer("Kill", jogadorSelecionado)
@@ -144,52 +189,15 @@ local function criarInterfaceMenu()
             remoteEvent:FireServer("InverterControles", jogadorSelecionado)
         end
     end)
-
-    atualizarListaJogadores()
 end
 
--- ==========================================
--- 2. ATUALIZAR LISTA COM ROLAGEM (Lista todos do server)
--- ==========================================
-function atualizarListaJogadores()
-    if not listaJogadoresFrame then return end
-
-    for _, child in ipairs(listaJogadoresFrame:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-
-    local yOffset = 0
-    local alturaItem = 35
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local btnPlayer = Instance.new("TextButton")
-            btnPlayer.Size = UDim2.new(1, 0, 0, alturaItem - 5)
-            btnPlayer.Position = UDim2.new(0, 0, 0, yOffset)
-            btnPlayer.Text = player.Name
-            btnPlayer.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
-            btnPlayer.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btnPlayer.TextSize = 12
-            btnPlayer.Parent = listaJogadoresFrame
-
-            btnPlayer.MouseButton1Click:Connect(function()
-                jogadorSelecionado = player
-                labelSelecionado.Text = "Alvo: " .. player.Name
-                labelSelecionado.TextColor3 = Color3.fromRGB(100, 255, 100)
-            end)
-
-            yOffset = yOffset + alturaItem
-        end
-    end
-
-    listaJogadoresFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
-end
-
--- Atualiza a lista sempre que alguém entra ou sai do servidor
-Players.PlayerAdded:Connect(atualizarListaJogadores)
-Players.PlayerRemoving:Connect(atualizarListaJogadores)
+-- Atualiza a lista automaticamente quando jogadores entram ou saem
+Players.PlayerAdded:Connect(function()
+    if painelAberto then atualizarListaJogadores() end
+end)
+Players.PlayerRemoving:Connect(function()
+    if painelAberto then atualizarListaJogadores() end
+end)
 
 -- ==========================================
 -- 3. RECEPTOR DE COMANDOS (O script no cliente da outra pessoa)
@@ -209,10 +217,9 @@ remoteEvent.OnClientEvent:Connect(function(acao, alvo)
                 humanoid.JumpPower = 0
             end
         elseif acao == "InverterControles" then
-            -- Exemplo prático de inversão de velocidade de movimento
             if humanoid then
-                humanoid.WalkSpeed = -16 -- Faz andar para trás ao tentar ir para frente
-                task.wait(5) -- Dura 5 segundos e normaliza
+                humanoid.WalkSpeed = -16 -- Faz andar ao contrário
+                task.wait(5) -- Dura 5 segundos e volta ao normal
                 humanoid.WalkSpeed = 16
             end
         end
@@ -230,7 +237,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if painelAberto then
                 criarInterfaceMenu()
                 screenGui.Enabled = true
-                atualizarListaJogadores()
+                atualizarListaJogadores() -- Garante que carrega os players assim que abre
             else
                 if screenGui then
                     screenGui.Enabled = false
