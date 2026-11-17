@@ -1,1 +1,225 @@
- -- LocalScript (StarterPlayerScripts)  local Players = game:GetService("Players") local UserInputService = game:GetService("UserInputService") local RunService = game:GetService("RunService")  local player = Players.LocalPlayer local character = player.Character or player.CharacterAdded:Wait() local camera = workspace.CurrentCamera  local humanoidRootPart = character:WaitForChild("HumanoidRootPart") local running = false local speed = 110-- Velocidade  -- Criar GUI local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui")) screenGui.Name = "ControlGUI"  local frame = Instance.new("Frame", screenGui) frame.Size = UDim2.new(0, 200, 0, 75) frame.Position = UDim2.new(0, 50, 0, 50) frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) frame.Active = true frame.Draggable = true  local toggleButton = Instance.new("TextButton", frame) toggleButton.Size = UDim2.new(1, -20, 0, 40) toggleButton.Position = UDim2.new(0, 10, 0, 10) toggleButton.Text = "Ativar Movimento" toggleButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50) toggleButton.TextColor3 = Color3.new(1, 1, 1) toggleButton.Font = Enum.Font.SourceSansBold toggleButton.TextSize = 18  -- Alternar o movimento toggleButton.MouseButton1Click:Connect(function() 	running = not running 	if running then 		toggleButton.Text = "Desativar Movimento" 		toggleButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50) 	else 		toggleButton.Text = "Ativar Movimento" 		toggleButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50) 	end end)  -- Parar com clique UserInputService.InputBegan:Connect(function(input, gameProcessed) 	if input.UserInputType == Enum.UserInputType.MouseButton1 then 		running = false 		toggleButton.Text = "Ativar Movimento" 		toggleButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50) 	end end)  -- Mover constantemente na direção da câmera RunService.RenderStepped:Connect(function() 	if running and character and humanoidRootPart then 		local camLookVector = camera.CFrame.LookVector 		humanoidRootPart.Velocity = camLookVector * speed 	end end)
+-- ==========================================
+-- CONFIGURAÇÕES E VARIÁVEIS GLOBAIS
+-- ==========================================
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local UserInputService = game:GetService("UserInputService")
+
+-- Identificador para verificar quem está usando o mesmo script
+local SCRIPT_TAG_IDENTIFIER = "AdminPanel_Shared"
+
+local painelAberto = false
+local screenGui = nil
+local listaJogadoresFrame = nil
+local jogadorSelecionado = nil
+local labelSelecionado = nil
+
+-- ==========================================
+-- 1. CRIANDO A INTERFACE (MENU LARGO E COM ROLAGEM)
+-- ==========================================
+local function criarInterfaceMenu()
+    if screenGui then return end
+
+    screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "ScriptAdminMenuLargo"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
+
+    -- Janela Principal (Mais larga: 450px de largura x 320px de altura)
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(0, 450, 0, 320)
+    mainFrame.Position = UDim2.new(0.5, -225, 0.5, -160)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = screenGui
+
+    -- Título
+    local titulo = Instance.new("TextLabel")
+    titulo.Size = UDim2.new(1, 0, 0, 35)
+    titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titulo.Text = "Painel de Controle Compartilhado (Alt + W)"
+    titulo.TextSize = 13
+    titulo.Font = Enum.Font.SourceSansBold
+    titulo.Parent = mainFrame
+
+    -- ------------------------------------------
+    -- COLUNA DA ESQUERDA: LISTA DE JOGADORES COM ROLAGEM
+    -- ------------------------------------------
+    local containerLista = Instance.new("Frame")
+    containerLista.Size = UDim2.new(0, 200, 1, -50)
+    containerLista.Position = UDim2.new(0, 10, 0, 42)
+    containerLista.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    containerLista.Parent = mainFrame
+
+    local labelListaTitulo = Instance.new("TextLabel")
+    labelListaTitulo.Size = UDim2.new(1, 0, 0, 25)
+    labelListaTitulo.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    labelListaTitulo.TextColor3 = Color3.fromRGB(200, 200, 200)
+    labelListaTitulo.Text = "Jogadores com o Script:"
+    labelListaTitulo.TextSize = 11
+    labelListaTitulo.Parent = containerLista
+
+    listaJogadoresFrame = Instance.new("ScrollingFrame")
+    listaJogadoresFrame.Size = UDim2.new(1, -10, 1, -35)
+    listaJogadoresFrame.Position = UDim2.new(0, 5, 0, 30)
+    listaJogadoresFrame.BackgroundTransparency = 1
+    listaJogadoresFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    listaJogadoresFrame.Parent = containerLista
+
+    -- ------------------------------------------
+    -- COLUNA DA DIREITA: FUNÇÕES (Kill, Freeze, Inverter)
+    -- ------------------------------------------
+    local painelAcoes = Instance.new("Frame")
+    painelAcoes.Size = UDim2.new(0, 215, 1, -50)
+    painelAcoes.Position = UDim2.new(0, 220, 0, 42)
+    painelAcoes.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    painelAcoes.Parent = mainFrame
+
+    -- Status de quem está selecionado
+    labelSelecionado = Instance.new("TextLabel")
+    labelSelecionado.Size = UDim2.new(1, -10, 0, 35)
+    labelSelecionado.Position = UDim2.new(0, 5, 0, 5)
+    labelSelecionado.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    labelSelecionado.TextColor3 = Color3.fromRGB(255, 255, 100)
+    labelSelecionado.Text = "Alvo: Nenhum selecionado"
+    labelSelecionado.TextSize = 11
+    labelSelecionado.TextWrapped = true
+    labelSelecionado.Parent = painelAcoes
+
+    -- Botão Kill
+    local btnKill = Instance.new("TextButton")
+    btnKill.Size = UDim2.new(1, -10, 0, 45)
+    btnKill.Position = UDim2.new(0, 5, 0, 50)
+    btnKill.Text = "Matar (Kill)"
+    btnKill.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+    btnKill.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnKill.Font = Enum.Font.SourceSansBold
+    btnKill.TextSize = 14
+    btnKill.Parent = painelAcoes
+
+    -- Botão Freeze
+    local btnFreeze = Instance.new("TextButton")
+    btnFreeze.Size = UDim2.new(1, -10, 0, 45)
+    btnFreeze.Position = UDim2.new(0, 5, 0, 105)
+    btnFreeze.Text = "Congelar (Freeze)"
+    btnFreeze.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
+    btnFreeze.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnFreeze.Font = Enum.Font.SourceSansBold
+    btnFreeze.TextSize = 14
+    btnFreeze.Parent = painelAcoes
+
+    -- Botão Inverter Controles
+    local btnInverter = Instance.new("TextButton")
+    btnInverter.Size = UDim2.new(1, -10, 0, 45)
+    btnInverter.Position = UDim2.new(0, 5, 0, 160)
+    btnInverter.Text = "Inverter Controles"
+    btnInverter.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
+    btnInverter.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnInverter.Font = Enum.Font.SourceSansBold
+    btnInverter.TextSize = 14
+    btnInverter.Parent = painelAcoes
+
+    -- AÇÕES DOS BOTÕES DE COMANDO
+    btnKill.MouseButton1Click:Connect(function()
+        if jogadorSelecionado then
+            enviarComandoRemoto("Kill", jogadorSelecionado)
+        end
+    end)
+
+    btnFreeze.MouseButton1Click:Connect(function()
+        if jogadorSelecionado then
+            enviarComandoRemoto("Freeze", jogadorSelecionado)
+        end
+    end)
+
+    btnInverter.MouseButton1Click:Connect(function()
+        if jogadorSelecionado then
+            enviarComandoRemoto("InverterControles", jogadorSelecionado)
+        end
+    end)
+
+    atualizarListaJogadores()
+end
+
+-- ==========================================
+-- 2. ATUALIZAR LISTA COM ROLAGEM (Filtro)
+-- ==========================================
+function atualizarListaJogadores()
+    if not listaJogadoresFrame then return end
+
+    -- Limpa os botões antigos
+    for _, child in ipairs(listaJogadoresFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    local yOffset = 0
+    local alturaItem = 35
+    local totalJogadoresValidos = 0
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            -- Verifica quem está usando o mesmo script
+            if player:GetAttribute(SCRIPT_TAG_IDENTIFIER) == true then
+                totalJogadoresValidos = totalJogadoresValidos + 1
+
+                local btnPlayer = Instance.new("TextButton")
+                btnPlayer.Size = UDim2.new(1, 0, 0, alturaItem - 5)
+                btnPlayer.Position = UDim2.new(0, 0, 0, yOffset)
+                btnPlayer.Text = player.Name
+                btnPlayer.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+                btnPlayer.TextColor3 = Color3.fromRGB(255, 255, 255)
+                btnPlayer.TextSize = 12
+                btnPlayer.Parent = listaJogadoresFrame
+
+                -- Ao clicar, define o alvo atual
+                btnPlayer.MouseButton1Click:Connect(function()
+                    jogadorSelecionado = player
+                    labelSelecionado.Text = "Alvo: " .. player.Name
+                    labelSelecionado.TextColor3 = Color3.fromRGB(100, 255, 100)
+                end)
+
+                yOffset = yOffset + alturaItem
+            end
+        end
+    end
+
+    -- Ajusta o tamanho da barra de rolagem (ScrollingFrame) dinamicamente
+    listaJogadoresFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+end
+
+-- ==========================================
+-- 3. ENVIO DE COMANDO (REDE)
+-- ==========================================
+function enviarComandoRemoto(acao, alvo)
+    print("Comando [" .. acao .. "] disparado para o jogador: " .. alvo.Name)
+    -- Aqui você conecta com o RemoteEvent do seu jogo para aplicar a lógica no cliente do alvo.
+end
+
+-- ==========================================
+-- 4. ATALHO DO TECLADO (Alt + W)
+-- ==========================================
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.W then
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) or UserInputService:IsKeyDown(Enum.KeyCode.RightAlt) then
+            
+            -- Ativa a sua própria tag para ser reconhecido pelos outros
+            LocalPlayer:SetAttribute(SCRIPT_TAG_IDENTIFIER, true)
+
+            painelAberto = not painelAberto
+            
+            if painelAberto then
+                criarInterfaceMenu()
+                screenGui.Enabled = true
+                atualizarListaJogadores()
+            else
+                if screenGui then
+                    screenGui.Enabled = false
+                end
+            end
+        end
+    end
+end)
