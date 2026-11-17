@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 2.2 - Botão Flutuante Direto)
+-- PAINEL ADMIN COMPARTILHADO (Versão 2.4 - Apenas Alt + W)
 -- ==========================================
 
 task.wait(2)
@@ -7,6 +7,7 @@ task.wait(2)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TextChatService = game:GetService("TextChatService")
@@ -221,33 +222,12 @@ local function atualizarTextoBotaoModo()
 end
 
 local function criarInterfaceMenu()
-    if screenGui then
-        painelAberto = not painelAberto
-        local mainFrame = screenGui:FindFirstChild("MainFrame")
-        if mainFrame then
-            mainFrame.Visible = painelAberto
-            if painelAberto then
-                atualizarListaJogadores()
-            end
-        end
-        return
-    end
+    if screenGui then return end
 
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "ScriptAdminMenuLargo"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = PlayerGui
-
-    -- BOTÃO FLUTUANTE NA TELA (Sempre visível para abrir/fechar o menu com 1 clique)
-    local btnAbrir = Instance.new("TextButton")
-    btnAbrir.Size = UDim2.new(0, 110, 0, 35)
-    btnAbrir.Position = UDim2.new(0, 10, 0, 10)
-    btnAbrir.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    btnAbrir.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnAbrir.Text = "[Abrir Admin]"
-    btnAbrir.TextSize = 12
-    btnAbrir.Font = Enum.Font.SourceSansBold
-    btnAbrir.Parent = screenGui
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
@@ -255,23 +235,13 @@ local function criarInterfaceMenu()
     mainFrame.Position = UDim2.new(0.5, -340, 0.5, -195)
     mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     mainFrame.BorderSizePixel = 0
-    mainFrame.Visible = true
     mainFrame.Parent = screenGui
-    painelAberto = true
-
-    btnAbrir.MouseButton1Click:Connect(function()
-        painelAberto = not painelAberto
-        mainFrame.Visible = painelAberto
-        if painelAberto then
-            atualizarListaJogadores()
-        end
-    end)
 
     local titulo = Instance.new("TextLabel")
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin v2.2"
+    titulo.Text = "Painel Admin v2.4"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
@@ -485,6 +455,27 @@ end
 Players.PlayerAdded:Connect(conectarLegacyChat)
 
 -- ==========================================
--- 7. EXECUÇÃO AUTOMÁTICA DA INTERFACE
+-- 7. ATALHO DO TECLADO (Alt + W)
 -- ==========================================
-criarInterfaceMenu()
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.W then
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) or UserInputService:IsKeyDown(Enum.KeyCode.RightAlt) then
+            painelAberto = not painelAberto
+
+            if painelAberto then
+                criarInterfaceMenu()
+                if screenGui then
+                    local mf = screenGui:FindFirstChild("MainFrame")
+                    if mf then mf.Visible = true end
+                end
+                atualizarListaJogadores()
+            else
+                if screenGui then
+                    local mf = screenGui:FindFirstChild("MainFrame")
+                    if mf then mf.Visible = false end
+                end
+            end
+        end
+    end
+end)
