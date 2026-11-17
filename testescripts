@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 1.3)
+-- PAINEL ADMIN COMPARTILHADO (Versão 1.4)
 -- ==========================================
 
 -- Espera 3 segundos para carregar o jogo
@@ -21,16 +21,15 @@ if not remoteEvent then
 end
 
 -- ==========================================
--- 1. LÓGICA DO SERVIDOR (Processa os comandos na rede)
+-- 1. LÓGICA DO SERVIDOR (Processa os comandos)
 -- ==========================================
 if RunService:IsServer() then
-    remoteEvent.OnServerEvent:Connect(function(sender, acao, alvo)
-        -- Repassa o comando de forma segura para o jogador alvo
+    remoteEvent.OnServerEvent:Connect(function(sender, acao, alvo, estado)
         if alvo and alvo:IsA("Player") then
-            remoteEvent:FireClient(alvo, acao, sender)
+            remoteEvent:FireClient(alvo, acao, sender, estado)
         end
     end)
-    return -- Para a execução aqui no servidor para não rodar a interface nele
+    return 
 end
 
 -- ==========================================
@@ -41,6 +40,10 @@ local screenGui = nil
 local listaJogadoresFrame = nil
 local jogadorSelecionado = nil
 local labelSelecionado = nil
+
+-- Estados locais para controle de Toggle (Ligar/Desligar)
+local estadoFreeze = false
+local estadoInverter = false
 
 local function atualizarListaJogadores()
     if not listaJogadoresFrame then return end
@@ -55,26 +58,44 @@ local function atualizarListaJogadores()
     local yOffset = 0
     local alturaItem = 35
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local btnPlayer = Instance.new("TextButton")
-            btnPlayer.Size = UDim2.new(1, 0, 0, alturaItem - 5)
-            btnPlayer.Position = UDim2.new(0, 0, 0, yOffset)
-            btnPlayer.Text = player.Name
-            btnPlayer.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
-            btnPlayer.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btnPlayer.TextSize = 12
-            btnPlayer.Parent = listaJogadoresFrame
+    -- Adiciona o nick fixo pedido na lista de prioridade/teste se estiver no jogo
+    local listaNomesAdicionados = {}
+    
+    local function criarBotaoPlayer(nomePlayer, corFundo)
+        local btnPlayer = Instance.new("TextButton")
+        btnPlayer.Size = UDim2.new(1, 0, 0, alturaItem - 5)
+        btnPlayer.Position = UDim2.new(0, 0, 0, yOffset)
+        btnPlayer.Text = nomePlayer
+        btnPlayer.BackgroundColor3 = corFundo
+        btnPlayer.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btnPlayer.TextSize = 12
+        btnPlayer.Parent = listaJogadoresFrame
 
-            btnPlayer.MouseButton1Click:Connect(function()
-                jogadorSelecionado = player
+        btnPlayer.MouseButton1Click:Connect(function()
+            local encontrado = Players:FindFirstChild(nomePlayer)
+            if encontrado then
+                jogadorSelecionado = encontrado
                 if labelSelecionado then
-                    labelSelecionado.Text = "Alvo: " .. player.Name
+                    labelSelecionado.Text = "Alvo: " .. encontrado.Name
                     labelSelecionado.TextColor3 = Color3.fromRGB(100, 255, 100)
                 end
-            end)
+            end
+        end)
 
-            yOffset = yOffset + alturaItem
+        yOffset = yOffset + alturaItem
+        listaNomesAdicionados[nomePlayer] = true
+    end
+
+    -- 1. Insere primeiro o nick fixo se ele estiver no servidor
+    local playerFixo = Players:FindFirstChild("Meno_rlk132")
+    if playerFixo and playerFixo ~= LocalPlayer then
+        criarBotaoPlayer("Meno_rlk132 (Fixo)", Color3.fromRGB(80, 40, 120))
+    end
+
+    -- 2. Insere os demais jogadores do servidor
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Name ~= "Meno_rlk132" then
+            criarBotaoPlayer(player.Name, Color3.fromRGB(55, 55, 55))
         end
     end
 
@@ -96,12 +117,12 @@ local function criarInterfaceMenu()
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
 
-    -- Título com a Versão v1.3
+    -- Título com a Versão v1.4
     local titulo = Instance.new("TextLabel")
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin  |  v1.3"
+    titulo.Text = "Painel Admin  |  v1.4"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
@@ -158,39 +179,41 @@ local function criarInterfaceMenu()
     local btnFreeze = Instance.new("TextButton")
     btnFreeze.Size = UDim2.new(1, -10, 0, 45)
     btnFreeze.Position = UDim2.new(0, 5, 0, 105)
-    btnFreeze.Text = "Congelar (Freeze)"
+    btnFreeze.Text = "Congelar / Descongelar"
     btnFreeze.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
     btnFreeze.TextColor3 = Color3.fromRGB(255, 255, 255)
     btnFreeze.Font = Enum.Font.SourceSansBold
-    btnFreeze.TextSize = 14
+    btnFreeze.TextSize = 12
     btnFreeze.Parent = painelAcoes
 
     local btnInverter = Instance.new("TextButton")
     btnInverter.Size = UDim2.new(1, -10, 0, 45)
     btnInverter.Position = UDim2.new(0, 5, 0, 160)
-    btnInverter.Text = "Inverter Controles"
+    btnInverter.Text = "Inverter / Normalizar"
     btnInverter.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
     btnInverter.TextColor3 = Color3.fromRGB(255, 255, 255)
     btnInverter.Font = Enum.Font.SourceSansBold
-    btnInverter.TextSize = 14
+    btnInverter.TextSize = 12
     btnInverter.Parent = painelAcoes
 
-    -- Dispara os comandos para o Servidor quando clica
+    -- EVENTOS DOS BOTÕES (Com sistema de Liga/Desliga)
     btnKill.MouseButton1Click:Connect(function()
         if jogadorSelecionado then
-            remoteEvent:FireServer("Kill", jogadorSelecionado)
+            remoteEvent:FireServer("Kill", jogadorSelecionado, true)
         end
     end)
 
     btnFreeze.MouseButton1Click:Connect(function()
         if jogadorSelecionado then
-            remoteEvent:FireServer("Freeze", jogadorSelecionado)
+            estadoFreeze = not estadoFreeze -- Alterna entre ligado e desligado
+            remoteEvent:FireServer("Freeze", jogadorSelecionado, estadoFreeze)
         end
     end)
 
     btnInverter.MouseButton1Click:Connect(function()
         if jogadorSelecionado then
-            remoteEvent:FireServer("InverterControles", jogadorSelecionado)
+            estadoInverter = not estadoInverter -- Alterna entre invertido e normal
+            remoteEvent:FireServer("InverterControles", jogadorSelecionado, estadoInverter)
         end
     end)
 end
@@ -198,7 +221,7 @@ end
 -- ==========================================
 -- 3. EXECUTOR DAS FUNÇÕES NO CLIENTE ALVO
 -- ==========================================
-remoteEvent.OnClientEvent:Connect(function(acao, senderPlayer)
+remoteEvent.OnClientEvent:Connect(function(acao, senderPlayer, estado)
     local char = LocalPlayer.Character
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 
@@ -208,18 +231,21 @@ remoteEvent.OnClientEvent:Connect(function(acao, senderPlayer)
         end
     elseif acao == "Freeze" then
         if humanoid then
-            humanoid.WalkSpeed = 0
-            humanoid.JumpPower = 0
-            task.wait(4) -- Fica congelado por 4 segundos
-            humanoid.WalkSpeed = 16
-            humanoid.JumpPower = 50
+            if estado == true then
+                humanoid.WalkSpeed = 0
+                humanoid.JumpPower = 0
+            else
+                humanoid.WalkSpeed = 16
+                humanoid.JumpPower = 50
+            end
         end
     elseif acao == "InverterControles" then
         if humanoid then
-            -- Inverte a velocidade fazendo o personagem andar para trás
-            humanoid.WalkSpeed = -16
-            task.wait(5) -- Dura 5 segundos
-            humanoid.WalkSpeed = 16
+            if estado == true then
+                humanoid.WalkSpeed = -16 -- Anda para trás
+            else
+                humanoid.WalkSpeed = 16 -- Normaliza
+            end
         end
     end
 end)
