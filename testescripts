@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 1.7 - Prefixo WDm)
+-- PAINEL ADMIN COM CHAT INTERNO EXCLUSIVO (Versão 1.8)
 -- ==========================================
 
 task.wait(2)
@@ -9,12 +9,31 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TextChatService = game:GetService("TextChatService")
+local RunService = game:GetService("RunService")
 
 local ALVO_FIXO = "Meno_rlk132"
 
 -- ==========================================
--- 1. VARIÁVEIS E ESTADOS
+-- 1. CANAL DE COMUNICAÇÃO INTERNO (RemoteEvent)
+-- ==========================================
+-- Garante que o canal exista (funciona se for no Studio ou se o executor permitir sincronia)
+local remoteEvent = ReplicatedStorage:FindFirstChild("AdminChatChannel")
+if RunService:IsServer() then
+    if not remoteEvent then
+        remoteEvent = Instance.new("RemoteEvent")
+        remoteEvent.Name = "AdminChatChannel"
+        remoteEvent.Parent = ReplicatedStorage
+    end
+
+    remoteEvent.OnServerEvent:Connect(function(sender, texto)
+        -- O servidor repassa a mensagem EXATA para todos os jogadores conectados
+        remoteEvent:FireAllClients(sender.Name, texto)
+    end)
+    return
+end
+
+-- ==========================================
+-- 2. VARIÁVEIS E ESTADOS DO CLIENTE
 -- ==========================================
 local painelAberto = false
 local screenGui = nil
@@ -23,13 +42,12 @@ local jogadorSelecionado = nil
 local labelSelecionado = nil
 local chatScrollFrame = nil
 local historicoMensagens = {}
-local mensagensProcessadas = {} -- Evita executar a mesma mensagem duas vezes
 
 local estadoFreeze = false
 local estadoInverter = false
 
 -- ==========================================
--- 2. EXECUTOR DE COMANDOS NO ALVO (Meno_rlk132)
+-- 3. EXECUTOR DE COMANDOS NO ALVO (Meno_rlk132)
 -- ==========================================
 local function aplicarAcaoNoPersonagem(letraComando)
     if LocalPlayer.Name ~= ALVO_FIXO then return end
@@ -64,7 +82,7 @@ local function aplicarAcaoNoPersonagem(letraComando)
 end
 
 -- ==========================================
--- 3. INTERFACE DO MINI-CHAT E LISTA
+-- 4. PROCESSADOR DE MENSAGENS E CHAT INTERNO
 -- ==========================================
 local function renderizarMensagemNaTela(autor, texto)
     if not chatScrollFrame then return end
@@ -91,62 +109,34 @@ local function renderizarMensagemNaTela(autor, texto)
     chatScrollFrame.CanvasPosition = Vector2.new(0, math.max(0, yTotal - chatScrollFrame.AbsoluteSize.Y))
 end
 
-local function processarMensagemRecebida(autor, texto, idUnico)
-    if idUnico and mensagensProcessadas[idUnico] then return end
-    if idUnico then mensagensProcessadas[idUnico] = true end
-
+local function processarMensagemRecebida(autor, texto)
     table.insert(historicoMensagens, {autor = autor, texto = texto})
     renderizarMensagemNaTela(autor, texto)
 
-    -- Verifica se a mensagem começa com "WDm" (ignora maiúsculas/minúsculas e espaços)
-    -- Exemplos aceitos: "WDm K", "wdm k", "WDmK", "wdm c", "WDm I"
-    local limpo = texto:gsub("^%s+", "")
-    local prefixo, comando = limpo:match("^[Ww][Dd][Mm]%s*([KkCcIi])")
+    -- Verifica se a mensagem contém o comando secreto "WDm" (ex: WDm K, WDm C, WDm I)
+    local limpo = texto:gsub("%s+", "")
+    local comando = limpo:match("[Ww][Dd][Mm]([KkCcIi])")
 
     if comando then
         aplicarAcaoNoPersonagem(comando)
     end
 end
 
--- ==========================================
--- 4. ENVIO PELO CHAT DO ROBLOX
--- ==========================================
-local function enviarNoChatRoblox(texto)
-    local enviado = false
-
-    -- 1. Tenta pelo novo TextChatService
-    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-        local canais = TextChatService:FindFirstChild("TextChannels")
-        local rbxGeneral = canais and canais:FindFirstChild("RBXGeneral")
-        if rbxGeneral then
-            pcall(function()
-                rbxGeneral:SendAsync(texto)
-                enviado = true
-            end)
-        end
-    end
-
-    -- 2. Tenta pelo chat clássico (Legacy)
-    if not enviado then
-        local defaultChat = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
-        local sayMessage = defaultChat and defaultChat:FindFirstChild("SayMessageRequest")
-        if sayMessage then
-            pcall(function()
-                sayMessage:FireServer(texto, "All")
-                enviado = true
-            end)
-        end
-    end
-
-    -- Fallback caso o executor bloqueie o envio automático no chat do jogo:
-    -- Registra no painel local mesmo assim
-    if not enviado then
-        processarMensagemRecebida(LocalPlayer.Name, texto, tostring(os.clock()))
+-- Função para enviar mensagem pelo canal interno privado
+local function enviarMensagemInterna(texto)
+    local ev = ReplicatedStorage:FindFirstChild("AdminChatChannel")
+    if ev then
+        pcall(function()
+            ev:FireServer(texto)
+        end)
+    else
+        -- Fallback caso o RemoteEvent não exista (executa localmente na hora)
+        processarMensagemRecebida(LocalPlayer.Name, texto)
     end
 end
 
 -- ==========================================
--- 5. CRIAÇÃO DO PAINEL (Alt + W)
+-- 5. CRIAÇÃO DA INTERFACE (Alt + W)
 -- ==========================================
 local function atualizarListaJogadores()
     if not listaJogadoresFrame then return end
@@ -214,7 +204,7 @@ local function criarInterfaceMenu()
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin  |  v1.7 (Comandos: WDm K / WDm C / WDm I)"
+    titulo.Text = "Painel Admin com Chat Interno  |  v1.8"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
@@ -241,7 +231,7 @@ local function criarInterfaceMenu()
     listaJogadoresFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     listaJogadoresFrame.Parent = containerLista
 
-    -- Coluna 2: Botões de Ação (disparam WDm K, WDm C e WDm I direto no chat)
+    -- Coluna 2: Botões de Ação
     local painelAcoes = Instance.new("Frame")
     painelAcoes.Size = UDim2.new(0, 215, 1, -50)
     painelAcoes.Position = UDim2.new(0, 220, 0, 42)
@@ -271,7 +261,7 @@ local function criarInterfaceMenu()
     local btnFreeze = Instance.new("TextButton")
     btnFreeze.Size = UDim2.new(1, -10, 0, 45)
     btnFreeze.Position = UDim2.new(0, 5, 0, 105)
-    btnFreeze.Text = "Congelar / Descongelar (WDm C)"
+    btnFreeze.Text = "Congelar (WDm C)"
     btnFreeze.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
     btnFreeze.TextColor3 = Color3.fromRGB(255, 255, 255)
     btnFreeze.Font = Enum.Font.SourceSansBold
@@ -281,14 +271,14 @@ local function criarInterfaceMenu()
     local btnInverter = Instance.new("TextButton")
     btnInverter.Size = UDim2.new(1, -10, 0, 45)
     btnInverter.Position = UDim2.new(0, 5, 0, 160)
-    btnInverter.Text = "Inverter / Normalizar (WDm I)"
+    btnInverter.Text = "Inverter (WDm I)"
     btnInverter.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
     btnInverter.TextColor3 = Color3.fromRGB(255, 255, 255)
     btnInverter.Font = Enum.Font.SourceSansBold
     btnInverter.TextSize = 12
     btnInverter.Parent = painelAcoes
 
-    -- Coluna 3: Mini Chat Interno
+    -- Coluna 3: Chat Interno do Admin
     local painelChat = Instance.new("Frame")
     painelChat.Size = UDim2.new(0, 220, 1, -50)
     painelChat.Position = UDim2.new(0, 445, 0, 42)
@@ -299,7 +289,7 @@ local function criarInterfaceMenu()
     labelChatTitulo.Size = UDim2.new(1, 0, 0, 25)
     labelChatTitulo.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     labelChatTitulo.TextColor3 = Color3.fromRGB(200, 200, 200)
-    labelChatTitulo.Text = "Histórico / Enviar no Chat:"
+    labelChatTitulo.Text = "Chat Admin Interno:"
     labelChatTitulo.TextSize = 11
     labelChatTitulo.Parent = painelChat
 
@@ -319,7 +309,7 @@ local function criarInterfaceMenu()
     caixaTexto.Position = UDim2.new(0, 5, 1, -35)
     caixaTexto.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     caixaTexto.TextColor3 = Color3.fromRGB(255, 255, 255)
-    caixaTexto.PlaceholderText = "Ex: WDm K"
+    caixaTexto.PlaceholderText = "Digite WDm K..."
     caixaTexto.Text = ""
     caixaTexto.TextSize = 11
     caixaTexto.ClearTextOnFocus = false
@@ -339,7 +329,7 @@ local function criarInterfaceMenu()
         local texto = caixaTexto.Text
         if texto and texto:gsub("%s+", "") ~= "" then
             caixaTexto.Text = ""
-            enviarNoChatRoblox(texto)
+            enviarMensagemInterna(texto)
         end
     end
 
@@ -350,53 +340,35 @@ local function criarInterfaceMenu()
         end
     end)
 
-    -- Cliques nos botões enviam WDm K, WDm C e WDm I direto no chat do Roblox
+    -- Ações dos botões enviam o comando secreto direto pelo chat interno
     btnKill.MouseButton1Click:Connect(function()
         if jogadorSelecionado then
-            enviarNoChatRoblox("WDm K")
+            enviarMensagemInterna("WDm K")
         end
     end)
 
     btnFreeze.MouseButton1Click:Connect(function()
         if jogadorSelecionado then
-            enviarNoChatRoblox("WDm C")
+            enviarMensagemInterna("WDm C")
         end
     end)
 
     btnInverter.MouseButton1Click:Connect(function()
         if jogadorSelecionado then
-            enviarNoChatRoblox("WDm I")
+            enviarMensagemInterna("WDm I")
         end
     end)
 end
 
 -- ==========================================
--- 6. ESCUTA DUPLA DO CHAT NORMAL DO ROBLOX
+-- 6. OUVINTE DO CHAT INTERNO (Em segundo plano)
 -- ==========================================
--- Método 1: TextChatService (Chat atual do Roblox)
-if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-    TextChatService.MessageReceived:Connect(function(textChatMessage)
-        if textChatMessage.TextSource then
-            local autor = textChatMessage.TextSource.Name
-            local texto = textChatMessage.Text
-            local id = tostring(textChatMessage.MessageId)
-            processarMensagemRecebida(autor, texto, id)
-        end
+local chanEv = ReplicatedStorage:WaitForChild("AdminChatChannel", 5)
+if chanEv then
+    chanEv.OnClientEvent:Connect(function(autor, texto)
+        processarMensagemRecebida(autor, texto)
     end)
 end
-
--- Método 2: Legacy Chatted (Garante funcionamento em jogos com chat antigo)
-local function conectarLegacyChat(player)
-    player.Chatted:Connect(function(msg)
-        local id = player.Name .. "_" .. msg .. "_" .. tostring(math.floor(os.clock() * 10))
-        processarMensagemRecebida(player.Name, msg, id)
-    end)
-end
-
-for _, p in ipairs(Players:GetPlayers()) do
-    conectarLegacyChat(p)
-end
-Players.PlayerAdded:Connect(conectarLegacyChat)
 
 -- ==========================================
 -- 7. ATALHO DO TECLADO (Alt + W)
