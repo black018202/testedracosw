@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 3.2 - Tecla L + Botão Flutuante Mobile)
+-- PAINEL ADMIN COMPARTILHADO (Versão 3.3 - Botão Engrenagem Canto Inferior Direito)
 -- ==========================================
 
 task.wait(2)
@@ -7,7 +7,6 @@ task.wait(2)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TextChatService = game:GetService("TextChatService")
@@ -226,7 +225,7 @@ local function atualizarListaJogadores()
         btnPlayer.MouseButton1Click:Connect(function()
             jogadorSelecionado = playerObj
             if labelSelecionado then
-                labelSelecionado.Text = "Alvo: " .. playerObj.Name
+                labelSelecionado.Text = "Alvo: " + playerObj.Name
                 labelSelecionado.TextColor3 = Color3.fromRGB(100, 255, 100)
             end
         end)
@@ -259,44 +258,27 @@ local function atualizarTextoBotaoModo()
     end
 end
 
-local function alternarPainel()
-    painelAberto = not painelAberto
-    if screenGui then
-        local mainFrame = screenGui:FindFirstChild("MainFrame")
-        if mainFrame then
-            mainFrame.Visible = painelAberto
-            if painelAberto then
-                atualizarListaJogadores()
-            end
-        end
-    end
-end
-
 local function criarInterfaceMenu()
-    if screenGui then
-        alternarPainel()
-        return
-    end
+    if screenGui then return end
 
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "ScriptAdminMenuLargo"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = PlayerGui
 
-    -- BOTÃO FLUTUANTE (Essencial para abrir no celular onde não há teclado físico)
-    local btnAbrirFlutuante = Instance.new("TextButton")
-    btnAbrirFlutuante.Size = UDim2.new(0, 100, 0, 30)
-    btnAbrirFlutuante.Position = UDim2.new(0, 10, 0, 10)
-    btnAbrirFlutuante.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    btnAbrirFlutuante.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnAbrirFlutuante.Text = "[Abrir Admin]"
-    btnAbrirFlutuante.TextSize = 11
-    btnAbrirFlutuante.Font = Enum.Font.SourceSansBold
-    btnAbrirFlutuante.Parent = screenGui
+    -- ENGRENAGEM PEQUENA NO CANTO INFERIOR DIREITO
+    local btnEngrenagem = Instance.new("TextButton")
+    btnEngrenagem.Size = UDim2.new(0, 32, 0, 32)
+    btnEngrenagem.Position = UDim2.new(1, -42, 1, -42)
+    btnEngrenagem.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btnEngrenagem.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnEngrenagem.Text = "⚙️"
+    btnEngrenagem.TextSize = 18
+    btnEngrenagem.Parent = screenGui
 
-    btnAbrirFlutuante.MouseButton1Click:Connect(function()
-        alternarPainel()
-    end)
+    local cantoArredondado = Instance.new("UICorner")
+    cantoArredondado.CornerRadius = UDim.new(0, 6)
+    cantoArredondado.Parent = btnEngrenagem
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
@@ -307,11 +289,19 @@ local function criarInterfaceMenu()
     mainFrame.Visible = false -- Inicia fechado
     mainFrame.Parent = screenGui
 
+    btnEngrenagem.MouseButton1Click:Connect(function()
+        painelAberto = not painelAberto
+        mainFrame.Visible = painelAberto
+        if painelAberto then
+            atualizarListaJogadores()
+        end
+    end)
+
     local titulo = Instance.new("TextLabel")
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin v3.2 (Tecla L ou Botão)"
+    titulo.Text = "Painel Admin v3.3"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
@@ -558,6 +548,6 @@ end
 Players.PlayerAdded:Connect(conectarLegacyChat)
 
 -- ==========================================
--- 7. ATALHO DO TECLADO (Tecla L) + CRIAÇÃO DA TELA
+-- 7. INICIALIZAÇÃO DA INTERFACE
 -- ==========================================
-UserInputService.InputBegan:Connect(function(input, game
+criarInterfaceMenu()
