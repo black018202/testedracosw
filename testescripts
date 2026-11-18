@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 3.1 - Atalho Tecla L)
+-- PAINEL ADMIN COMPARTILHADO (Versão 3.2 - Tecla L + Botão Flutuante Mobile)
 -- ==========================================
 
 task.wait(2)
@@ -259,13 +259,44 @@ local function atualizarTextoBotaoModo()
     end
 end
 
+local function alternarPainel()
+    painelAberto = not painelAberto
+    if screenGui then
+        local mainFrame = screenGui:FindFirstChild("MainFrame")
+        if mainFrame then
+            mainFrame.Visible = painelAberto
+            if painelAberto then
+                atualizarListaJogadores()
+            end
+        end
+    end
+end
+
 local function criarInterfaceMenu()
-    if screenGui then return end
+    if screenGui then
+        alternarPainel()
+        return
+    end
 
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "ScriptAdminMenuLargo"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = PlayerGui
+
+    -- BOTÃO FLUTUANTE (Essencial para abrir no celular onde não há teclado físico)
+    local btnAbrirFlutuante = Instance.new("TextButton")
+    btnAbrirFlutuante.Size = UDim2.new(0, 100, 0, 30)
+    btnAbrirFlutuante.Position = UDim2.new(0, 10, 0, 10)
+    btnAbrirFlutuante.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    btnAbrirFlutuante.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnAbrirFlutuante.Text = "[Abrir Admin]"
+    btnAbrirFlutuante.TextSize = 11
+    btnAbrirFlutuante.Font = Enum.Font.SourceSansBold
+    btnAbrirFlutuante.Parent = screenGui
+
+    btnAbrirFlutuante.MouseButton1Click:Connect(function()
+        alternarPainel()
+    end)
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
@@ -273,13 +304,14 @@ local function criarInterfaceMenu()
     mainFrame.Position = UDim2.new(0.5, -340, 0.5, -220)
     mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     mainFrame.BorderSizePixel = 0
+    mainFrame.Visible = false -- Inicia fechado
     mainFrame.Parent = screenGui
 
     local titulo = Instance.new("TextLabel")
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin v3.1 (Atalho: Tecla L)"
+    titulo.Text = "Painel Admin v3.2 (Tecla L ou Botão)"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
@@ -526,26 +558,6 @@ end
 Players.PlayerAdded:Connect(conectarLegacyChat)
 
 -- ==========================================
--- 7. ATALHO DO TECLADO (Tecla L)
+-- 7. ATALHO DO TECLADO (Tecla L) + CRIAÇÃO DA TELA
 -- ==========================================
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.L then
-        painelAberto = not painelAberto
-
-        if painelAberto then
-            criarInterfaceMenu()
-            if screenGui then
-                local mf = screenGui:FindFirstChild("MainFrame")
-                if mf then mf.Visible = true end
-            end
-            atualizarListaJogadores()
-        else
-            if screenGui then
-                local mf = screenGui:FindFirstChild("MainFrame")
-                if mf then mf.Visible = false end
-            end
-        end
-    end
-end)
+UserInputService.InputBegan:Connect(function(input, game
