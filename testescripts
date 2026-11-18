@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 3.0 - Chat Roblox Perfeito)
+-- PAINEL ADMIN COMPARTILHADO (Versão 3.1 - Atalho Tecla L)
 -- ==========================================
 
 task.wait(2)
@@ -120,10 +120,8 @@ local function aplicarAcaoNoPersonagem(comandoCompleto)
     end
 end
 
--- Varre o texto procurando o comando WDm seguido de K, C, I ou Ck
 local function verificarEExecutarComando(texto)
     local limpo = texto:gsub("%s+", "")
-    -- Procura por WDm K, WDm C, WDm I ou WDm Ck
     local comando = limpo:match("[Ww][Dd][Mm]([Kk][Cc]|[KkCcIi])")
     if comando then
         aplicarAcaoNoPersonagem(comando)
@@ -164,10 +162,8 @@ local function processarTextoRecebido(autor, texto)
     verificarEExecutarComando(texto)
 end
 
--- Função de envio respeitando o modo selecionado
 local function enviarComandoOuMensagem(texto)
     if modoChatAtual == 1 then
-        -- Modo 1: Chat Virtual Interno
         local ev = ReplicatedStorage:FindFirstChild("AdminChatChannelV2")
         if ev then
             pcall(function() ev:FireServer(texto) end)
@@ -175,10 +171,7 @@ local function enviarComandoOuMensagem(texto)
             processarTextoRecebido(LocalPlayer.Name, texto)
         end
     else
-        -- Modo 2: Chat Oficial do Roblox
         local enviado = false
-
-        -- Sistema novo (TextChatService)
         if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
             local canais = TextChatService:FindFirstChild("TextChannels")
             local rbxGeneral = canais and canais:FindFirstChild("RBXGeneral")
@@ -190,7 +183,6 @@ local function enviarComandoOuMensagem(texto)
             end
         end
 
-        -- Sistema antigo (LegacyChat) caso o novo falhe
         if not enviado then
             local defaultChat = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
             local sayMessage = defaultChat and defaultChat:FindFirstChild("SayMessageRequest")
@@ -202,7 +194,6 @@ local function enviarComandoOuMensagem(texto)
             end
         end
 
-        -- Exibe também na tela de quem enviou para feedback visual
         processarTextoRecebido(LocalPlayer.Name, texto)
     end
 end
@@ -288,7 +279,7 @@ local function criarInterfaceMenu()
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin v3.0"
+    titulo.Text = "Painel Admin v3.1 (Atalho: Tecla L)"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
@@ -495,10 +486,8 @@ local function criarInterfaceMenu()
 end
 
 -- ==========================================
--- 6. OUVINTES DE REDE E CHAT DO ROBLOX (Sempre Ativos)
+-- 6. OUVINTES DE REDE E CHAT DO ROBLOX
 -- ==========================================
-
--- Ouvinte do Chat Virtual Interno
 local chanEv = ReplicatedStorage:WaitForChild("AdminChatChannelV2", 5)
 if chanEv then
     chanEv.OnClientEvent:Connect(function(autor, texto)
@@ -509,25 +498,19 @@ if chanEv then
     end)
 end
 
--- Ouvinte do Chat do Roblox (TextChatService - Novo)
 if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
     TextChatService.MessageReceived:Connect(function(textChatMessage)
         if textChatMessage.TextSource then
             local autor = textChatMessage.TextSource.Name
             local texto = textChatMessage.Text
-            
-            -- Se estiver no modo 2, exibe na tela do painel
             if modoChatAtual == 2 then
                 renderizarMensagemNaTela(autor, texto)
             end
-            
-            -- A conta alvo processa e executa o comando independentemente do modo visual
             verificarEExecutarComando(texto)
         end
     end)
 end
 
--- Ouvinte do Chat do Roblox (Legacy / Antigo)
 local function conectarLegacyChat(player)
     player.Chatted:Connect(function(msg)
         if modoChatAtual == 2 then
@@ -543,12 +526,12 @@ end
 Players.PlayerAdded:Connect(conectarLegacyChat)
 
 -- ==========================================
--- 7. ATALHO DO TECLADO (Tecla K)
+-- 7. ATALHO DO TECLADO (Tecla L)
 -- ==========================================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
-    if input.KeyCode == Enum.KeyCode.K then
+    if input.KeyCode == Enum.KeyCode.L then
         painelAberto = not painelAberto
 
         if painelAberto then
@@ -557,4 +540,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                 local mf = screenGui:FindFirstChild("MainFrame")
                 if mf then mf.Visible = true end
             end
-            atualizarList
+            atualizarListaJogadores()
+        else
+            if screenGui then
+                local mf = screenGui:FindFirstChild("MainFrame")
+                if mf then mf.Visible = false end
+            end
+        end
+    end
+end)
