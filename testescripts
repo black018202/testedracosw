@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 2.6)
+-- PAINEL ADMIN COMPARTILHADO (Versão 2.7 Corrigida)
 -- ==========================================
 
 task.wait(2)
@@ -69,20 +69,17 @@ local function aplicarAcaoNoPersonagem(comandoCompleto)
         if humanoid then humanoid.Health = 0 end
 
     elseif cmd == "CK" then
-        -- Função Kick com a mensagem solicitada
         LocalPlayer:Kick("Exploits Dected HAHAHAH")
 
     elseif cmd == "C" then
         estadoFreeze = not estadoFreeze
         if estadoFreeze then
-            -- Congelamento total (Trava a posição e zera velocidade)
             if humanoid then
                 humanoid.WalkSpeed = 0
                 humanoid.JumpPower = 0
                 humanoid.AutoRotate = false
             end
             
-            -- Mantém preso exatamente no mesmo lugar por loop para não ser empurrado
             if rootPart then
                 local posicaoFixa = rootPart.CFrame
                 if conexaoCongelamento then conexaoCongelamento:Disconnect() end
@@ -100,7 +97,6 @@ local function aplicarAcaoNoPersonagem(comandoCompleto)
                 end)
             end
         else
-            -- Descongela e libera a movimentação
             if conexaoCongelamento then
                 conexaoCongelamento:Disconnect()
                 conexaoCongelamento = nil
@@ -126,7 +122,6 @@ end
 
 local function verificarEExecutarComando(texto)
     local limpo = texto:gsub("%s+", "")
-    -- Detecta comandos do tipo WDm K, WDm C, WDm I ou WDm Ck
     local comando = limpo:match("[Ww][Dd][Mm]([Kk][Cc]|[KkCcIi])")
     if comando then
         aplicarAcaoNoPersonagem(comando)
@@ -282,7 +277,7 @@ local function criarInterfaceMenu()
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin v2.6"
+    titulo.Text = "Painel Admin v2.7"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
@@ -516,7 +511,7 @@ local function conectarLegacyChat(player)
         if modoChatAtual == 2 then
             renderizarMensagemNaTela(player.Name, msg)
         end
-        verificarEExecurusComando and verificarEExecutarComando(msg) or verificarEExecutarComando(msg)
+        verificarEExecutarComando(msg)
     end)
 end
 
@@ -526,7 +521,7 @@ end
 Players.PlayerAdded:Connect(conectarLegacyChat)
 
 -- ==========================================
--- 7. ATALHO DO TECLADO (Alt + W)
+-- 7. ATALHO DO TECLADO (Alt + W) CORRIGIDO
 -- ==========================================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
