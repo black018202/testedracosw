@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 3.3 - Botão Engrenagem Canto Inferior Direito)
+-- PAINEL ADMIN COMPARTILHADO (Versão 3.5)
 -- ==========================================
 
 task.wait(2)
@@ -42,7 +42,6 @@ local chatScrollFrame = nil
 local btnModoChat = nil
 local historicoMensagens = {}
 
--- Botões da interface
 local btnFreezeUI = nil
 local btnInverterUI = nil
 
@@ -225,7 +224,7 @@ local function atualizarListaJogadores()
         btnPlayer.MouseButton1Click:Connect(function()
             jogadorSelecionado = playerObj
             if labelSelecionado then
-                labelSelecionado.Text = "Alvo: " + playerObj.Name
+                labelSelecionado.Text = "Alvo: " .. playerObj.Name
                 labelSelecionado.TextColor3 = Color3.fromRGB(100, 255, 100)
             end
         end)
@@ -258,254 +257,247 @@ local function atualizarTextoBotaoModo()
     end
 end
 
-local function criarInterfaceMenu()
-    if screenGui then return end
+-- Criação única da ScreenGui e da Engrenagem
+screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ScriptAdminMenuLargo"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
 
-    screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ScriptAdminMenuLargo"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = PlayerGui
+-- Engrenagem Canto Inferior Direito
+local btnEngrenagem = Instance.new("TextButton")
+btnEngrenagem.Size = UDim2.new(0, 36, 0, 36)
+btnEngrenagem.Position = UDim2.new(1, -46, 1, -46)
+btnEngrenagem.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+btnEngrenagem.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnEngrenagem.Text = "⚙"
+btnEngrenagem.TextSize = 20
+btnEngrenagem.Parent = screenGui
 
-    -- ENGRENAGEM PEQUENA NO CANTO INFERIOR DIREITO
-    local btnEngrenagem = Instance.new("TextButton")
-    btnEngrenagem.Size = UDim2.new(0, 32, 0, 32)
-    btnEngrenagem.Position = UDim2.new(1, -42, 1, -42)
-    btnEngrenagem.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    btnEngrenagem.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnEngrenagem.Text = "⚙️"
-    btnEngrenagem.TextSize = 18
-    btnEngrenagem.Parent = screenGui
+local cantoArredondado = Instance.new("UICorner")
+cantoArredondado.CornerRadius = UDim.new(0, 8)
+cantoArredondado.Parent = btnEngrenagem
 
-    local cantoArredondado = Instance.new("UICorner")
-    cantoArredondado.CornerRadius = UDim.new(0, 6)
-    cantoArredondado.Parent = btnEngrenagem
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 680, 0, 440)
+mainFrame.Position = UDim2.new(0.5, -340, 0.5, -220)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
 
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 680, 0, 440)
-    mainFrame.Position = UDim2.new(0.5, -340, 0.5, -220)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Visible = false -- Inicia fechado
-    mainFrame.Parent = screenGui
+btnEngrenagem.MouseButton1Click:Connect(function()
+    painelAberto = not painelAberto
+    mainFrame.Visible = painelAberto
+    if painelAberto then
+        atualizarListaJogadores()
+    end
+end)
 
-    btnEngrenagem.MouseButton1Click:Connect(function()
-        painelAberto = not painelAberto
-        mainFrame.Visible = painelAberto
-        if painelAberto then
-            atualizarListaJogadores()
-        end
-    end)
+local titulo = Instance.new("TextLabel")
+titulo.Size = UDim2.new(1, 0, 0, 35)
+titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
+titulo.Text = "Painel Admin v3.5"
+titulo.TextSize = 13
+titulo.Font = Enum.Font.SourceSansBold
+titulo.Parent = mainFrame
 
-    local titulo = Instance.new("TextLabel")
-    titulo.Size = UDim2.new(1, 0, 0, 35)
-    titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin v3.3"
-    titulo.TextSize = 13
-    titulo.Font = Enum.Font.SourceSansBold
-    titulo.Parent = mainFrame
+btnModoChat = Instance.new("TextButton")
+btnModoChat.Size = UDim2.new(0, 180, 0, 26)
+btnModoChat.Position = UDim2.new(1, -190, 0, 5)
+btnModoChat.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnModoChat.TextSize = 11
+btnModoChat.Font = Enum.Font.SourceSansBold
+btnModoChat.Parent = mainFrame
+atualizarTextoBotaoModo()
 
-    btnModoChat = Instance.new("TextButton")
-    btnModoChat.Size = UDim2.new(0, 180, 0, 26)
-    btnModoChat.Position = UDim2.new(1, -190, 0, 5)
-    btnModoChat.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnModoChat.TextSize = 11
-    btnModoChat.Font = Enum.Font.SourceSansBold
-    btnModoChat.Parent = mainFrame
+btnModoChat.MouseButton1Click:Connect(function()
+    if modoChatAtual == 1 then
+        modoChatAtual = 2
+    else
+        modoChatAtual = 1
+    end
     atualizarTextoBotaoModo()
+end)
 
-    btnModoChat.MouseButton1Click:Connect(function()
-        if modoChatAtual == 1 then
-            modoChatAtual = 2
-        else
-            modoChatAtual = 1
-        end
-        atualizarTextoBotaoModo()
-    end)
+-- Coluna 1: Lista de Jogadores
+local containerLista = Instance.new("Frame")
+containerLista.Size = UDim2.new(0, 200, 1, -55)
+containerLista.Position = UDim2.new(0, 10, 0, 45)
+containerLista.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+containerLista.Parent = mainFrame
 
-    -- Coluna 1: Lista de Jogadores
-    local containerLista = Instance.new("Frame")
-    containerLista.Size = UDim2.new(0, 200, 1, -55)
-    containerLista.Position = UDim2.new(0, 10, 0, 45)
-    containerLista.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    containerLista.Parent = mainFrame
+local labelListaTitulo = Instance.new("TextLabel")
+labelListaTitulo.Size = UDim2.new(1, 0, 0, 25)
+labelListaTitulo.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+labelListaTitulo.TextColor3 = Color3.fromRGB(200, 200, 200)
+labelListaTitulo.Text = "Jogadores no Servidor:"
+labelListaTitulo.TextSize = 11
+labelListaTitulo.Parent = containerLista
 
-    local labelListaTitulo = Instance.new("TextLabel")
-    labelListaTitulo.Size = UDim2.new(1, 0, 0, 25)
-    labelListaTitulo.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    labelListaTitulo.TextColor3 = Color3.fromRGB(200, 200, 200)
-    labelListaTitulo.Text = "Jogadores no Servidor:"
-    labelListaTitulo.TextSize = 11
-    labelListaTitulo.Parent = containerLista
+listaJogadoresFrame = Instance.new("ScrollingFrame")
+listaJogadoresFrame.Size = UDim2.new(1, -10, 1, -35)
+listaJogadoresFrame.Position = UDim2.new(0, 5, 0, 30)
+listaJogadoresFrame.BackgroundTransparency = 1
+listaJogadoresFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+listaJogadoresFrame.Parent = containerLista
 
-    listaJogadoresFrame = Instance.new("ScrollingFrame")
-    listaJogadoresFrame.Size = UDim2.new(1, -10, 1, -35)
-    listaJogadoresFrame.Position = UDim2.new(0, 5, 0, 30)
-    listaJogadoresFrame.BackgroundTransparency = 1
-    listaJogadoresFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    listaJogadoresFrame.Parent = containerLista
+-- Coluna 2: Botões de Ação
+local painelAcoes = Instance.new("Frame")
+painelAcoes.Size = UDim2.new(0, 215, 1, -55)
+painelAcoes.Position = UDim2.new(0, 220, 0, 45)
+painelAcoes.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+painelAcoes.Parent = mainFrame
 
-    -- Coluna 2: Botões de Ação
-    local painelAcoes = Instance.new("Frame")
-    painelAcoes.Size = UDim2.new(0, 215, 1, -55)
-    painelAcoes.Position = UDim2.new(0, 220, 0, 45)
-    painelAcoes.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    painelAcoes.Parent = mainFrame
+labelSelecionado = Instance.new("TextLabel")
+labelSelecionado.Size = UDim2.new(1, -10, 0, 35)
+labelSelecionado.Position = UDim2.new(0, 5, 0, 5)
+labelSelecionado.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+labelSelecionado.TextColor3 = Color3.fromRGB(255, 255, 100)
+labelSelecionado.Text = "Alvo: Nenhum selecionado"
+labelSelecionado.TextSize = 11
+labelSelecionado.TextWrapped = true
+labelSelecionado.Parent = painelAcoes
 
-    labelSelecionado = Instance.new("TextLabel")
-    labelSelecionado.Size = UDim2.new(1, -10, 0, 35)
-    labelSelecionado.Position = UDim2.new(0, 5, 0, 5)
-    labelSelecionado.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    labelSelecionado.TextColor3 = Color3.fromRGB(255, 255, 100)
-    labelSelecionado.Text = "Alvo: Nenhum selecionado"
-    labelSelecionado.TextSize = 11
-    labelSelecionado.TextWrapped = true
-    labelSelecionado.Parent = painelAcoes
+local btnKill = Instance.new("TextButton")
+btnKill.Size = UDim2.new(1, -10, 0, 40)
+btnKill.Position = UDim2.new(0, 5, 0, 45)
+btnKill.Text = "Matar (WDm K)"
+btnKill.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+btnKill.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnKill.Font = Enum.Font.SourceSansBold
+btnKill.TextSize = 13
+btnKill.Parent = painelAcoes
 
-    local btnKill = Instance.new("TextButton")
-    btnKill.Size = UDim2.new(1, -10, 0, 40)
-    btnKill.Position = UDim2.new(0, 5, 0, 45)
-    btnKill.Text = "Matar (WDm K)"
-    btnKill.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-    btnKill.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnKill.Font = Enum.Font.SourceSansBold
-    btnKill.TextSize = 13
-    btnKill.Parent = painelAcoes
+btnFreezeUI = Instance.new("TextButton")
+btnFreezeUI.Size = UDim2.new(1, -10, 0, 40)
+btnFreezeUI.Position = UDim2.new(0, 5, 0, 90)
+btnFreezeUI.Text = "Congelar (WDm C)"
+btnFreezeUI.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
+btnFreezeUI.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnFreezeUI.Font = Enum.Font.SourceSansBold
+btnFreezeUI.TextSize = 12
+btnFreezeUI.Parent = painelAcoes
 
-    btnFreezeUI = Instance.new("TextButton")
-    btnFreezeUI.Size = UDim2.new(1, -10, 0, 40)
-    btnFreezeUI.Position = UDim2.new(0, 5, 0, 90)
-    btnFreezeUI.Text = "Congelar (WDm C)"
-    btnFreezeUI.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
-    btnFreezeUI.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnFreezeUI.Font = Enum.Font.SourceSansBold
-    btnFreezeUI.TextSize = 12
-    btnFreezeUI.Parent = painelAcoes
+btnInverterUI = Instance.new("TextButton")
+btnInverterUI.Size = UDim2.new(1, -10, 0, 40)
+btnInverterUI.Position = UDim2.new(0, 5, 0, 135)
+btnInverterUI.Text = "Inverter (WDm I)"
+btnInverterUI.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
+btnInverterUI.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnInverterUI.Font = Enum.Font.SourceSansBold
+btnInverterUI.TextSize = 12
+btnInverterUI.Parent = painelAcoes
 
-    btnInverterUI = Instance.new("TextButton")
-    btnInverterUI.Size = UDim2.new(1, -10, 0, 40)
-    btnInverterUI.Position = UDim2.new(0, 5, 0, 135)
-    btnInverterUI.Text = "Inverter (WDm I)"
-    btnInverterUI.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
-    btnInverterUI.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnInverterUI.Font = Enum.Font.SourceSansBold
-    btnInverterUI.TextSize = 12
-    btnInverterUI.Parent = painelAcoes
+local btnKick = Instance.new("TextButton")
+btnKick.Size = UDim2.new(1, -10, 0, 40)
+btnKick.Position = UDim2.new(0, 5, 0, 180)
+btnKick.Text = "Kickar (WDm Ck)"
+btnKick.BackgroundColor3 = Color3.fromRGB(100, 20, 20)
+btnKick.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnKick.Font = Enum.Font.SourceSansBold
+btnKick.TextSize = 13
+btnKick.Parent = painelAcoes
 
-    local btnKick = Instance.new("TextButton")
-    btnKick.Size = UDim2.new(1, -10, 0, 40)
-    btnKick.Position = UDim2.new(0, 5, 0, 180)
-    btnKick.Text = "Kickar (WDm Ck)"
-    btnKick.BackgroundColor3 = Color3.fromRGB(100, 20, 20)
-    btnKick.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnKick.Font = Enum.Font.SourceSansBold
-    btnKick.TextSize = 13
-    btnKick.Parent = painelAcoes
+-- Coluna 3: Chat
+local painelChat = Instance.new("Frame")
+painelChat.Size = UDim2.new(0, 220, 1, -55)
+painelChat.Position = UDim2.new(0, 445, 0, 45)
+painelChat.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+painelChat.Parent = mainFrame
 
-    -- Coluna 3: Chat
-    local painelChat = Instance.new("Frame")
-    painelChat.Size = UDim2.new(0, 220, 1, -55)
-    painelChat.Position = UDim2.new(0, 445, 0, 45)
-    painelChat.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    painelChat.Parent = mainFrame
+local labelChatTitulo = Instance.new("TextLabel")
+labelChatTitulo.Size = UDim2.new(1, 0, 0, 25)
+labelChatTitulo.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+labelChatTitulo.TextColor3 = Color3.fromRGB(200, 200, 200)
+labelChatTitulo.Text = "Chat do Painel:"
+labelChatTitulo.TextSize = 11
+labelChatTitulo.Parent = painelChat
 
-    local labelChatTitulo = Instance.new("TextLabel")
-    labelChatTitulo.Size = UDim2.new(1, 0, 0, 25)
-    labelChatTitulo.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    labelChatTitulo.TextColor3 = Color3.fromRGB(200, 200, 200)
-    labelChatTitulo.Text = "Chat do Painel:"
-    labelChatTitulo.TextSize = 11
-    labelChatTitulo.Parent = painelChat
+chatScrollFrame = Instance.new("ScrollingFrame")
+chatScrollFrame.Size = UDim2.new(1, -10, 1, -70)
+chatScrollFrame.Position = UDim2.new(0, 5, 0, 30)
+chatScrollFrame.BackgroundTransparency = 1
+chatScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+chatScrollFrame.Parent = painelChat
 
-    chatScrollFrame = Instance.new("ScrollingFrame")
-    chatScrollFrame.Size = UDim2.new(1, -10, 1, -70)
-    chatScrollFrame.Position = UDim2.new(0, 5, 0, 30)
-    chatScrollFrame.BackgroundTransparency = 1
-    chatScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    chatScrollFrame.Parent = painelChat
+local caixaTexto = Instance.new("TextBox")
+caixaTexto.Size = UDim2.new(1, -60, 0, 30)
+caixaTexto.Position = UDim2.new(0, 5, 1, -35)
+caixaTexto.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+caixaTexto.TextColor3 = Color3.fromRGB(255, 255, 255)
+caixaTexto.PlaceholderText = "Digite WDm K..."
+caixaTexto.Text = ""
+caixaTexto.TextSize = 11
+caixaTexto.ClearTextOnFocus = false
+caixaTexto.Parent = painelChat
 
-    for _, msg in ipairs(historicoMensagens) do
-        renderizarMensagemNaTela(msg.autor, msg.texto)
+local btnEnviar = Instance.new("TextButton")
+btnEnviar.Size = UDim2.new(0, 48, 0, 30)
+btnEnviar.Position = UDim2.new(1, -52, 1, -35)
+btnEnviar.BackgroundColor3 = Color3.fromRGB(45, 140, 65)
+btnEnviar.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnEnviar.Font = Enum.Font.SourceSansBold
+btnEnviar.Text = "Enviar"
+btnEnviar.TextSize = 11
+btnEnviar.Parent = painelChat
+
+local function dispararChat()
+    local texto = caixaTexto.Text
+    if texto and texto:gsub("%s+", "") ~= "" then
+        caixaTexto.Text = ""
+        enviarComandoOuMensagem(texto)
     end
-
-    local caixaTexto = Instance.new("TextBox")
-    caixaTexto.Size = UDim2.new(1, -60, 0, 30)
-    caixaTexto.Position = UDim2.new(0, 5, 1, -35)
-    caixaTexto.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    caixaTexto.TextColor3 = Color3.fromRGB(255, 255, 255)
-    caixaTexto.PlaceholderText = "Digite WDm K..."
-    caixaTexto.Text = ""
-    caixaTexto.TextSize = 11
-    caixaTexto.ClearTextOnFocus = false
-    caixaTexto.Parent = painelChat
-
-    local btnEnviar = Instance.new("TextButton")
-    btnEnviar.Size = UDim2.new(0, 48, 0, 30)
-    btnEnviar.Position = UDim2.new(1, -52, 1, -35)
-    btnEnviar.BackgroundColor3 = Color3.fromRGB(45, 140, 65)
-    btnEnviar.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnEnviar.Font = Enum.Font.SourceSansBold
-    btnEnviar.Text = "Enviar"
-    btnEnviar.TextSize = 11
-    btnEnviar.Parent = painelChat
-
-    local function dispararChat()
-        local texto = caixaTexto.Text
-        if texto and texto:gsub("%s+", "") ~= "" then
-            caixaTexto.Text = ""
-            enviarComandoOuMensagem(texto)
-        end
-    end
-
-    btnEnviar.MouseButton1Click:Connect(dispararChat)
-    caixaTexto.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            dispararChat()
-        end
-    end)
-
-    -- Ações dos Botões
-    btnKill.MouseButton1Click:Connect(function()
-        if jogadorSelecionado then
-            enviarComandoOuMensagem("WDm K")
-        end
-    end)
-
-    btnKick.MouseButton1Click:Connect(function()
-        if jogadorSelecionado then
-            enviarComandoOuMensagem("WDm Ck")
-        end
-    end)
-
-    btnFreezeUI.MouseButton1Click:Connect(function()
-        if jogadorSelecionado then
-            estadoFreeze = not estadoFreeze
-            if estadoFreeze then
-                btnFreezeUI.Text = "Descongelar (WDm C)"
-                btnFreezeUI.BackgroundColor3 = Color3.fromRGB(150, 80, 40)
-            else
-                btnFreezeUI.Text = "Congelar (WDm C)"
-                btnFreezeUI.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
-            end
-            enviarComandoOuMensagem("WDm C")
-        end
-    end)
-
-    btnInverterUI.MouseButton1Click:Connect(function()
-        if jogadorSelecionado then
-            estadoInverter = not estadoInverter
-            if estadoInverter then
-                btnInverterUI.Text = "Normalizar (WDm I)"
-                btnInverterUI.BackgroundColor3 = Color3.fromRGB(40, 150, 100)
-            else
-                btnInverterUI.Text = "Inverter (WDm I)"
-                btnInverterUI.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
-            end
-            enviarComandoOuMensagem("WDm I")
-        end
-    end)
 end
+
+btnEnviar.MouseButton1Click:Connect(dispararChat)
+caixaTexto.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        dispararChat()
+    end
+end)
+
+-- Ações dos Botões
+btnKill.MouseButton1Click:Connect(function()
+    if jogadorSelecionado then
+        enviarComandoOuMensagem("WDm K")
+    end
+end)
+
+btnKick.MouseButton1Click:Connect(function()
+    if jogadorSelecionado then
+        enviarComandoOuMensagem("WDm Ck")
+    end
+end)
+
+btnFreezeUI.MouseButton1Click:Connect(function()
+    if jogadorSelecionado then
+        estadoFreeze = not estadoFreeze
+        if estadoFreeze then
+            btnFreezeUI.Text = "Descongelar (WDm C)"
+            btnFreezeUI.BackgroundColor3 = Color3.fromRGB(150, 80, 40)
+        else
+            btnFreezeUI.Text = "Congelar (WDm C)"
+            btnFreezeUI.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
+        end
+        enviarComandoOuMensagem("WDm C")
+    end
+end)
+
+btnInverterUI.MouseButton1Click:Connect(function()
+    if jogadorSelecionado then
+        estadoInverter = not estadoInverter
+        if estadoInverter then
+            btnInverterUI.Text = "Normalizar (WDm I)"
+            btnInverterUI.BackgroundColor3 = Color3.fromRGB(40, 150, 100)
+        else
+            btnInverterUI.Text = "Inverter (WDm I)"
+            btnInverterUI.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
+        end
+        enviarComandoOuMensagem("WDm I")
+    end
+end)
 
 -- ==========================================
 -- 6. OUVINTES DE REDE E CHAT DO ROBLOX
@@ -546,8 +538,3 @@ for _, p in ipairs(Players:GetPlayers()) do
     conectarLegacyChat(p)
 end
 Players.PlayerAdded:Connect(conectarLegacyChat)
-
--- ==========================================
--- 7. INICIALIZAÇÃO DA INTERFACE
--- ==========================================
-criarInterfaceMenu()
