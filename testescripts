@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 2.7 Corrigida)
+-- PAINEL ADMIN COMPARTILHADO (Versão 2.8 - Atalho Tecla K)
 -- ==========================================
 
 task.wait(2)
@@ -277,7 +277,7 @@ local function criarInterfaceMenu()
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin v2.7"
+    titulo.Text = "Painel Admin v2.8 (Atalho: Tecla K)"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
@@ -521,26 +521,26 @@ end
 Players.PlayerAdded:Connect(conectarLegacyChat)
 
 -- ==========================================
--- 7. ATALHO DO TECLADO (Alt + W) CORRIGIDO
+-- 7. ATALHO DO TECLADO (Tecla K)
 -- ==========================================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    -- Garante que não vai abrir se o jogador estiver digitando no chat do jogo
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.W then
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) or UserInputService:IsKeyDown(Enum.KeyCode.RightAlt) then
-            painelAberto = not painelAberto
+    
+    if input.KeyCode == Enum.KeyCode.K then
+        painelAberto = not painelAberto
 
-            if painelAberto then
-                criarInterfaceMenu()
-                if screenGui then
-                    local mf = screenGui:FindFirstChild("MainFrame")
-                    if mf then mf.Visible = true end
-                end
-                atualizarListaJogadores()
-            else
-                if screenGui then
-                    local mf = screenGui:FindFirstChild("MainFrame")
-                    if mf then mf.Visible = false end
-                end
+        if painelAberto then
+            criarInterfaceMenu()
+            if screenGui then
+                local mf = screenGui:FindFirstChild("MainFrame")
+                if mf then mf.Visible = true end
+            end
+            atualizarListaJogadores()
+        else
+            if screenGui then
+                local mf = screenGui:FindFirstChild("MainFrame")
+                if mf then mf.Visible = false end
             end
         end
     end
