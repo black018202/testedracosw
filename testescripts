@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 2.4 - Apenas Alt + W)
+-- PAINEL ADMIN COMPARTILHADO (Versão 2.5)
 -- ==========================================
 
 task.wait(2)
@@ -15,13 +15,13 @@ local TextChatService = game:GetService("TextChatService")
 local ALVO_FIXO = "Meno_rlk132"
 
 -- ==========================================
--- 1. CANAL DE COMUNICAÇÃO INTERNO (RemoteEvent)
+-- 1. CANAL DE COMUNICAÇÃO INTERNO ROBUSTO
 -- ==========================================
-local remoteEvent = ReplicatedStorage:FindFirstChild("AdminChatChannel")
+local remoteEvent = ReplicatedStorage:FindFirstChild("AdminChatChannelV2")
 if RunService:IsServer() then
     if not remoteEvent then
         remoteEvent = Instance.new("RemoteEvent")
-        remoteEvent.Name = "AdminChatChannel"
+        remoteEvent.Name = "AdminChatChannelV2"
         remoteEvent.Parent = ReplicatedStorage
     end
 
@@ -43,7 +43,11 @@ local chatScrollFrame = nil
 local btnModoChat = nil
 local historicoMensagens = {}
 
--- 1 = Chat Interno (Visual), 2 = Chat Oficial do Roblox
+-- Botões da interface para atualizar os textos
+local btnFreezeUI = nil
+local btnInverterUI = nil
+
+-- 1 = Chat Interno (Virtual), 2 = Chat Oficial do Roblox
 local modoChatAtual = 1 
 
 local estadoFreeze = false
@@ -128,13 +132,16 @@ end
 
 local function enviarComandoOuMensagem(texto)
     if modoChatAtual == 1 then
-        local ev = ReplicatedStorage:FindFirstChild("AdminChatChannel")
+        -- Modo 1: Chat Virtual (Interno)
+        local ev = ReplicatedStorage:FindFirstChild("AdminChatChannelV2")
         if ev then
             pcall(function() ev:FireServer(texto) end)
         else
+            -- Se não houver servidor compatível, dispara localmente para teste
             processarTextoRecebido(LocalPlayer.Name, texto)
         end
     else
+        -- Modo 2: Chat do Roblox
         local enviado = false
         if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
             local canais = TextChatService:FindFirstChild("TextChannels")
@@ -213,7 +220,7 @@ end
 local function atualizarTextoBotaoModo()
     if not btnModoChat then return end
     if modoChatAtual == 1 then
-        btnModoChat.Text = "Modo: [1] Chat Interno"
+        btnModoChat.Text = "Modo: [1] Chat Virtual"
         btnModoChat.BackgroundColor3 = Color3.fromRGB(40, 120, 60)
     else
         btnModoChat.Text = "Modo: [2] Chat Roblox"
@@ -241,7 +248,7 @@ local function criarInterfaceMenu()
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin v2.4"
+    titulo.Text = "Painel Admin v2.5"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
@@ -287,7 +294,7 @@ local function criarInterfaceMenu()
     listaJogadoresFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     listaJogadoresFrame.Parent = containerLista
 
-    -- Coluna 2: Botões de Ação
+    -- Coluna 2: Botões de Ação com Ligar/Desligar
     local painelAcoes = Instance.new("Frame")
     painelAcoes.Size = UDim2.new(0, 215, 1, -55)
     painelAcoes.Position = UDim2.new(0, 220, 0, 45)
@@ -314,27 +321,27 @@ local function criarInterfaceMenu()
     btnKill.TextSize = 14
     btnKill.Parent = painelAcoes
 
-    local btnFreeze = Instance.new("TextButton")
-    btnFreeze.Size = UDim2.new(1, -10, 0, 45)
-    btnFreeze.Position = UDim2.new(0, 5, 0, 105)
-    btnFreeze.Text = "Congelar (WDm C)"
-    btnFreeze.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
-    btnFreeze.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnFreeze.Font = Enum.Font.SourceSansBold
-    btnFreeze.TextSize = 12
-    btnFreeze.Parent = painelAcoes
+    btnFreezeUI = Instance.new("TextButton")
+    btnFreezeUI.Size = UDim2.new(1, -10, 0, 45)
+    btnFreezeUI.Position = UDim2.new(0, 5, 0, 105)
+    btnFreezeUI.Text = "Congelar (WDm C)"
+    btnFreezeUI.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
+    btnFreezeUI.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnFreezeUI.Font = Enum.Font.SourceSansBold
+    btnFreezeUI.TextSize = 12
+    btnFreezeUI.Parent = painelAcoes
 
-    local btnInverter = Instance.new("TextButton")
-    btnInverter.Size = UDim2.new(1, -10, 0, 45)
-    btnInverter.Position = UDim2.new(0, 5, 0, 160)
-    btnInverter.Text = "Inverter (WDm I)"
-    btnInverter.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
-    btnInverter.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnInverter.Font = Enum.Font.SourceSansBold
-    btnInverter.TextSize = 12
-    btnInverter.Parent = painelAcoes
+    btnInverterUI = Instance.new("TextButton")
+    btnInverterUI.Size = UDim2.new(1, -10, 0, 45)
+    btnInverterUI.Position = UDim2.new(0, 5, 0, 160)
+    btnInverterUI.Text = "Inverter (WDm I)"
+    btnInverterUI.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
+    btnInverterUI.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnInverterUI.Font = Enum.Font.SourceSansBold
+    btnInverterUI.TextSize = 12
+    btnInverterUI.Parent = painelAcoes
 
-    -- Coluna 3: Chat do Painel
+    -- Coluna 3: Chat Virtual / Interno
     local painelChat = Instance.new("Frame")
     painelChat.Size = UDim2.new(0, 220, 1, -55)
     painelChat.Position = UDim2.new(0, 445, 0, 45)
@@ -345,7 +352,7 @@ local function criarInterfaceMenu()
     labelChatTitulo.Size = UDim2.new(1, 0, 0, 25)
     labelChatTitulo.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     labelChatTitulo.TextColor3 = Color3.fromRGB(200, 200, 200)
-    labelChatTitulo.Text = "Chat do Painel:"
+    labelChatTitulo.Text = "Chat Virtual (Interno):"
     labelChatTitulo.TextSize = 11
     labelChatTitulo.Parent = painelChat
 
@@ -396,37 +403,101 @@ local function criarInterfaceMenu()
         end
     end)
 
+    -- Ações dos Botões
     btnKill.MouseButton1Click:Connect(function()
         if jogadorSelecionado then
             enviarComandoOuMensagem("WDm K")
         end
     end)
 
-    btnFreeze.MouseButton1Click:Connect(function()
+    -- Botão Congelar com alternância de texto (Congelar <-> Descongelar)
+    local localFreezeState = false
+    btnFreezeUI.MouseButton1Click:Connect(function()
         if jogadorSelecionado then
+            localFreezeState = not localFreezeState
+            if localFreezeState then
+                btnFreezeUI.Text = "Descongelar (WDm C)"
+                btnFreezeUI.BackgroundColor3 = Color3.fromRGB(150, 80, 40)
+            else
+                btnFreezeUI.Text = "Congelar (WDm C)"
+                btnFreezeUI.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
+            end
             enviarComandoOuMensagem("WDm C")
         end
     end)
 
-    btnInverter.MouseButton1Click:Connect(function()
+    -- Botão Inverter com alternância de texto (Inverter <-> Normalizar)
+    local localInvertState = false
+    btnInverterUI.MouseButton1Click:Connect(function()
         if jogadorSelecionado then
+            localInvertState = not localInvertState
+            if localInvertState then
+                btnInverterUI.Text = "Normalizar (WDm I)"
+                btnInverterUI.BackgroundColor3 = Color3.fromRGB(40, 150, 100)
+            else
+                btnInverterUI.Text = "Inverter (WDm I)"
+                btnInverterUI.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
+            end
             enviarComandoOuMensagem("WDm I")
         end
     end)
 end
 
 -- ==========================================
--- 6. OUVINTES DE REDE E CHAT DO ROBLOX
+-- 6. OUVINTES DE REDE (Chat Virtual e Chat Roblox)
 -- ==========================================
-local chanEv = ReplicatedStorage:WaitForChild("AdminChatChannel", 5)
+
+-- Canal do Chat Virtual corrigido para sincronizar entre os clientes
+local chanEv = ReplicatedStorage:WaitForChild("AdminChatChannelV2", 5)
 if chanEv then
     chanEv.OnClientEvent:Connect(function(autor, texto)
-        if modoChatAtual == 1 then
-            processarTextoRecebido(autor, texto)
+        processarTextoRecebido(autor, texto)
+    end)
+end
+
+-- Se o RemoteEvent padrão não existir no servidor do jogo, cria um canal alternativo local por ValueObject para os executores sincronizarem
+local backupSync = ReplicatedStorage:FindFirstChild("AdminSyncValue")
+if not backupSync and RunService:IsClient() then
+    pcall(function()
+        backupSync = Instance.new("StringValue")
+        backupSync.Name = "AdminSyncValue"
+        backupSync.Parent = ReplicatedStorage
+    end)
+end
+
+if backupSync then
+    backupSync.Changed:Connect(function(novoTexto)
+        if novoTexto ~= "" then
+            local partes = string.split(novoTexto, "||")
+            if #partes >= 2 then
+                local autor = partes[1]
+                local msg = partes[2]
+                processarTextoRecebido(autor, msg)
+            end
         end
     end)
 end
 
+-- Sobrescreve envio do Chat Virtual para usar o backup se necessário
+local originalEnviarVirtual = enviarComandoOuMensagem
+enviarComandoOuMensagem = function(texto)
+    if modoChatAtual == 1 then
+        local ev = ReplicatedStorage:FindFirstChild("AdminChatChannelV2")
+        if ev then
+            pcall(function() ev:FireServer(texto) end)
+        end
+        if backupSync then
+            pcall(function()
+                backupSync.Value = LocalPlayer.Name .. "||" .. texto .. "||" .. tostring(tick())
+            end)
+        end
+        processarTextoRecebido(LocalPlayer.Name, texto)
+    else
+        originalEnviarVirtual(texto)
+    end
+end
+
+-- Ouvintes do Chat do Roblox
 if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
     TextChatService.MessageReceived:Connect(function(textChatMessage)
         if textChatMessage.TextSource then
