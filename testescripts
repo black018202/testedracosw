@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 3.5)
+-- PAINEL ADMIN COMPARTILHADO (Versão 3.6 - Chat do Roblox Definitivo)
 -- ==========================================
 
 task.wait(2)
@@ -118,7 +118,9 @@ local function aplicarAcaoNoPersonagem(comandoCompleto)
     end
 end
 
+-- Varre o texto e executa o comando se encontrar WDm seguido de K, C, I ou Ck
 local function verificarEExecutarComando(texto)
+    if not texto then return end
     local limpo = texto:gsub("%s+", "")
     local comando = limpo:match("[Ww][Dd][Mm]([Kk][Cc]|[KkCcIi])")
     if comando then
@@ -169,7 +171,9 @@ local function enviarComandoOuMensagem(texto)
             processarTextoRecebido(LocalPlayer.Name, texto)
         end
     else
+        -- Envio otimizado para o Chat do Roblox
         local enviado = false
+        
         if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
             local canais = TextChatService:FindFirstChild("TextChannels")
             local rbxGeneral = canais and canais:FindFirstChild("RBXGeneral")
@@ -298,7 +302,7 @@ local titulo = Instance.new("TextLabel")
 titulo.Size = UDim2.new(1, 0, 0, 35)
 titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-titulo.Text = "Painel Admin v3.5"
+titulo.Text = "Painel Admin v3.6"
 titulo.TextSize = 13
 titulo.Font = Enum.Font.SourceSansBold
 titulo.Parent = mainFrame
@@ -500,7 +504,7 @@ btnInverterUI.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- 6. OUVINTES DE REDE E CHAT DO ROBLOX
+-- 6. OUVINTES DE REDE E CHAT DO ROBLOX ROBUSTOS
 -- ==========================================
 local chanEv = ReplicatedStorage:WaitForChild("AdminChatChannelV2", 5)
 if chanEv then
@@ -512,19 +516,38 @@ if chanEv then
     end)
 end
 
+-- Ouvinte Universal para TextChatService (Chat moderno do Roblox)
 if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-    TextChatService.MessageReceived:Connect(function(textChatMessage)
-        if textChatMessage.TextSource then
-            local autor = textChatMessage.TextSource.Name
-            local texto = textChatMessage.Text
-            if modoChatAtual == 2 then
-                renderizarMensagemNaTela(autor, texto)
-            end
+    local function monitorarCanal(canal)
+        if canal then
+            canal.MessageReceived:Connect(function(msg)
+                if msg.TextSource then
+                    local autor = msg.TextSource.Name
+                    local texto = msg.Text
+                    if modoChatAtual == 2 then
+                        renderizarMensagemNaTela(autor, texto)
+                    end
+                    verificarEExecutarComando(texto)
+                end
+            end)
+        end
+    end
+
+    local textChannels = TextChatService:FindFirstChild("TextChannels")
+    if textChannels then
+        monitorarCanal(textChannels:FindFirstChild("RBXGeneral"))
+        monitorarCanal(textChannels:FindFirstChild("RBXSystem"))
+    end
+    
+    TextChatService.MessageReceived:Connect(function(msg)
+        if msg.TextSource then
+            local texto = msg.Text
             verificarEExecutarComando(texto)
         end
     end)
 end
 
+-- Ouvinte Universal para Chat Legado / Antigo
 local function conectarLegacyChat(player)
     player.Chatted:Connect(function(msg)
         if modoChatAtual == 2 then
