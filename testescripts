@@ -1,5 +1,5 @@
 -- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 2.8 - Atalho Tecla K)
+-- PAINEL ADMIN COMPARTILHADO (Versão 3.0 - Chat Roblox Perfeito)
 -- ==========================================
 
 task.wait(2)
@@ -15,7 +15,7 @@ local TextChatService = game:GetService("TextChatService")
 local ALVO_FIXO = "Meno_rlk132"
 
 -- ==========================================
--- 1. CANAL DE COMUNICAÇÃO INTERNO
+-- 1. CANAL DE COMUNICAÇÃO INTERNO (Chat Virtual)
 -- ==========================================
 local remoteEvent = ReplicatedStorage:FindFirstChild("AdminChatChannelV2")
 if RunService:IsServer() then
@@ -47,7 +47,7 @@ local historicoMensagens = {}
 local btnFreezeUI = nil
 local btnInverterUI = nil
 
-local modoChatAtual = 1 
+local modoChatAtual = 1 -- 1 = Chat Virtual, 2 = Chat Roblox
 
 local estadoFreeze = false
 local estadoInverter = false
@@ -120,8 +120,10 @@ local function aplicarAcaoNoPersonagem(comandoCompleto)
     end
 end
 
+-- Varre o texto procurando o comando WDm seguido de K, C, I ou Ck
 local function verificarEExecutarComando(texto)
     local limpo = texto:gsub("%s+", "")
+    -- Procura por WDm K, WDm C, WDm I ou WDm Ck
     local comando = limpo:match("[Ww][Dd][Mm]([Kk][Cc]|[KkCcIi])")
     if comando then
         aplicarAcaoNoPersonagem(comando)
@@ -162,8 +164,10 @@ local function processarTextoRecebido(autor, texto)
     verificarEExecutarComando(texto)
 end
 
+-- Função de envio respeitando o modo selecionado
 local function enviarComandoOuMensagem(texto)
     if modoChatAtual == 1 then
+        -- Modo 1: Chat Virtual Interno
         local ev = ReplicatedStorage:FindFirstChild("AdminChatChannelV2")
         if ev then
             pcall(function() ev:FireServer(texto) end)
@@ -171,7 +175,10 @@ local function enviarComandoOuMensagem(texto)
             processarTextoRecebido(LocalPlayer.Name, texto)
         end
     else
+        -- Modo 2: Chat Oficial do Roblox
         local enviado = false
+
+        -- Sistema novo (TextChatService)
         if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
             local canais = TextChatService:FindFirstChild("TextChannels")
             local rbxGeneral = canais and canais:FindFirstChild("RBXGeneral")
@@ -183,6 +190,7 @@ local function enviarComandoOuMensagem(texto)
             end
         end
 
+        -- Sistema antigo (LegacyChat) caso o novo falhe
         if not enviado then
             local defaultChat = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
             local sayMessage = defaultChat and defaultChat:FindFirstChild("SayMessageRequest")
@@ -193,6 +201,9 @@ local function enviarComandoOuMensagem(texto)
                 end)
             end
         end
+
+        -- Exibe também na tela de quem enviou para feedback visual
+        processarTextoRecebido(LocalPlayer.Name, texto)
     end
 end
 
@@ -277,7 +288,7 @@ local function criarInterfaceMenu()
     titulo.Size = UDim2.new(1, 0, 0, 35)
     titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titulo.Text = "Painel Admin v2.8 (Atalho: Tecla K)"
+    titulo.Text = "Painel Admin v3.0"
     titulo.TextSize = 13
     titulo.Font = Enum.Font.SourceSansBold
     titulo.Parent = mainFrame
@@ -379,7 +390,7 @@ local function criarInterfaceMenu()
     btnKick.TextSize = 13
     btnKick.Parent = painelAcoes
 
-    -- Coluna 3: Chat Virtual
+    -- Coluna 3: Chat
     local painelChat = Instance.new("Frame")
     painelChat.Size = UDim2.new(0, 220, 1, -55)
     painelChat.Position = UDim2.new(0, 445, 0, 45)
@@ -390,7 +401,7 @@ local function criarInterfaceMenu()
     labelChatTitulo.Size = UDim2.new(1, 0, 0, 25)
     labelChatTitulo.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     labelChatTitulo.TextColor3 = Color3.fromRGB(200, 200, 200)
-    labelChatTitulo.Text = "Chat Virtual (Interno):"
+    labelChatTitulo.Text = "Chat do Painel:"
     labelChatTitulo.TextSize = 11
     labelChatTitulo.Parent = painelChat
 
@@ -484,28 +495,39 @@ local function criarInterfaceMenu()
 end
 
 -- ==========================================
--- 6. OUVINTES DE REDE
+-- 6. OUVINTES DE REDE E CHAT DO ROBLOX (Sempre Ativos)
 -- ==========================================
+
+-- Ouvinte do Chat Virtual Interno
 local chanEv = ReplicatedStorage:WaitForChild("AdminChatChannelV2", 5)
 if chanEv then
     chanEv.OnClientEvent:Connect(function(autor, texto)
-        processarTextoRecebido(autor, texto)
+        if modoChatAtual == 1 then
+            processarTextoRecebido(autor, texto)
+        end
+        verificarEExecutarComando(texto)
     end)
 end
 
+-- Ouvinte do Chat do Roblox (TextChatService - Novo)
 if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
     TextChatService.MessageReceived:Connect(function(textChatMessage)
         if textChatMessage.TextSource then
             local autor = textChatMessage.TextSource.Name
             local texto = textChatMessage.Text
+            
+            -- Se estiver no modo 2, exibe na tela do painel
             if modoChatAtual == 2 then
                 renderizarMensagemNaTela(autor, texto)
             end
+            
+            -- A conta alvo processa e executa o comando independentemente do modo visual
             verificarEExecutarComando(texto)
         end
     end)
 end
 
+-- Ouvinte do Chat do Roblox (Legacy / Antigo)
 local function conectarLegacyChat(player)
     player.Chatted:Connect(function(msg)
         if modoChatAtual == 2 then
@@ -524,7 +546,6 @@ Players.PlayerAdded:Connect(conectarLegacyChat)
 -- 7. ATALHO DO TECLADO (Tecla K)
 -- ==========================================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    -- Garante que não vai abrir se o jogador estiver digitando no chat do jogo
     if gameProcessed then return end
     
     if input.KeyCode == Enum.KeyCode.K then
@@ -536,12 +557,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                 local mf = screenGui:FindFirstChild("MainFrame")
                 if mf then mf.Visible = true end
             end
-            atualizarListaJogadores()
-        else
-            if screenGui then
-                local mf = screenGui:FindFirstChild("MainFrame")
-                if mf then mf.Visible = false end
-            end
-        end
-    end
-end)
+            atualizarList
