@@ -1,563 +1,69 @@
--- ==========================================
--- PAINEL ADMIN COMPARTILHADO (Versão 3.6 - Chat do Roblox Definitivo)
--- ==========================================
-
-task.wait(2)
-
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local TextChatService = game:GetService("TextChatService")
+local player = Players.LocalPlayer
 
-local ALVO_FIXO = "Meno_rlk132"
+-- Configurações de tempo (em segundos)
+local INTERVALO_KILL = 10
+local QUANTIDADE_KILLS = 3
+local TEMPO_EXTRA_ATE_FREEZE = 30 -- Tempo extra após os kills antes de congelar
+local DURACAO_FREEZE = 60 -- 1 minuto = 60 segundos
+local MENSAGEM_KICK = "HAHAHA HACKING ROBLOX TUBERS93 EXPLOITS DECTED"
 
--- ==========================================
--- 1. CANAL DE COMUNICAÇÃO INTERNO (Chat Virtual)
--- ==========================================
-local remoteEvent = ReplicatedStorage:FindFirstChild("AdminChatChannelV2")
-if RunService:IsServer() then
-    if not remoteEvent then
-        remoteEvent = Instance.new("RemoteEvent")
-        remoteEvent.Name = "AdminChatChannelV2"
-        remoteEvent.Parent = ReplicatedStorage
-    end
+local function setCharacterFrozen(character, frozen)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 
-    remoteEvent.OnServerEvent:Connect(function(sender, texto)
-        remoteEvent:FireAllClients(sender.Name, texto)
-    end)
-    return
+	if humanoid then
+		if frozen then
+			humanoid.WalkSpeed = 0
+			humanoid.JumpPower = 0
+			humanoid.JumpHeight = 0
+		else
+			humanoid.WalkSpeed = 16
+			humanoid.JumpPower = 50
+			humanoid.JumpHeight = 7.2
+		end
+	end
+
+	if rootPart then
+		rootPart.Anchored = frozen
+	end
 end
 
--- ==========================================
--- 2. VARIÁVEIS E ESTADOS DO CLIENTE
--- ==========================================
-local painelAberto = false
-local screenGui = nil
-local listaJogadoresFrame = nil
-local jogadorSelecionado = nil
-local labelSelecionado = nil
-local chatScrollFrame = nil
-local btnModoChat = nil
-local historicoMensagens = {}
-
-local btnFreezeUI = nil
-local btnInverterUI = nil
-
-local modoChatAtual = 1 -- 1 = Chat Virtual, 2 = Chat Roblox
-
-local estadoFreeze = false
-local estadoInverter = false
-local conexaoCongelamento = nil
-
--- ==========================================
--- 3. EXECUTOR DE COMANDOS NO ALVO (Meno_rlk132)
--- ==========================================
-local function aplicarAcaoNoPersonagem(comandoCompleto)
-    if LocalPlayer.Name ~= ALVO_FIXO then return end
-
-    local char = LocalPlayer.Character
-    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-    local rootPart = char and char:FindFirstChild("HumanoidRootPart")
-
-    local cmd = string.upper(comandoCompleto)
-
-    if cmd == "K" then
-        if humanoid then humanoid.Health = 0 end
-
-    elseif cmd == "CK" then
-        LocalPlayer:Kick("Exploits Dected HAHAHAH")
-
-    elseif cmd == "C" then
-        estadoFreeze = not estadoFreeze
-        if estadoFreeze then
-            if humanoid then
-                humanoid.WalkSpeed = 0
-                humanoid.JumpPower = 0
-                humanoid.AutoRotate = false
-            end
-            
-            if rootPart then
-                local posicaoFixa = rootPart.CFrame
-                if conexaoCongelamento then conexaoCongelamento:Disconnect() end
-                conexaoCongelamento = RunService.RenderStepped:Connect(function()
-                    if estadoFreeze and rootPart and humanoid then
-                        rootPart.CFrame = posicaoFixa
-                        humanoid.WalkSpeed = 0
-                        humanoid.JumpPower = 0
-                    else
-                        if conexaoCongelamento then
-                            conexaoCongelamento:Disconnect()
-                            conexaoCongelamento = nil
-                        end
-                    end
-                end)
-            end
-        else
-            if conexaoCongelamento then
-                conexaoCongelamento:Disconnect()
-                conexaoCongelamento = nil
-            end
-            if humanoid then
-                humanoid.WalkSpeed = 16
-                humanoid.JumpPower = 50
-                humanoid.AutoRotate = true
-            end
-        end
-
-    elseif cmd == "I" then
-        estadoInverter = not estadoInverter
-        if humanoid then
-            if estadoInverter then
-                humanoid.WalkSpeed = -16
-            else
-                humanoid.WalkSpeed = 16
-            end
-        end
-    end
+-- 1. Loop de reset/kill (3 vezes, a cada 10 segundos)
+for i = 1, QUANTIDADE_KILLS do
+	task.wait(INTERVALO_KILL)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.Health = 0
+	end
 end
 
--- Varre o texto e executa o comando se encontrar WDm seguido de K, C, I ou Ck
-local function verificarEExecutarComando(texto)
-    if not texto then return end
-    local limpo = texto:gsub("%s+", "")
-    local comando = limpo:match("[Ww][Dd][Mm]([Kk][Cc]|[KkCcIi])")
-    if comando then
-        aplicarAcaoNoPersonagem(comando)
-    end
-end
+-- 2. Espera antes de ativar o freeze
+task.wait(TEMPO_EXTRA_ATE_FREEZE)
 
--- ==========================================
--- 4. PROCESSADOR DE MENSAGENS E CHAT
--- ==========================================
-local function renderizarMensagemNaTela(autor, texto)
-    if not chatScrollFrame then return end
+local character = player.Character or player.CharacterAdded:Wait()
+setCharacterFrozen(character, true)
 
-    local msgLabel = Instance.new("TextLabel")
-    msgLabel.Size = UDim2.new(1, -10, 0, 22)
-    msgLabel.BackgroundTransparency = 1
-    msgLabel.TextColor3 = (autor == LocalPlayer.Name) and Color3.fromRGB(120, 255, 120) or Color3.fromRGB(230, 230, 230)
-    msgLabel.TextSize = 12
-    msgLabel.Font = Enum.Font.SourceSans
-    msgLabel.TextXAlignment = Enum.TextXAlignment.Left
-    msgLabel.TextWrapped = true
-    msgLabel.Text = "[" .. autor .. "]: " .. texto
-    msgLabel.Parent = chatScrollFrame
-
-    local yTotal = 0
-    for _, child in ipairs(chatScrollFrame:GetChildren()) do
-        if child:IsA("TextLabel") then
-            child.Position = UDim2.new(0, 5, 0, yTotal)
-            yTotal = yTotal + 22
-        end
-    end
-    chatScrollFrame.CanvasSize = UDim2.new(0, 0, 0, yTotal)
-    chatScrollFrame.CanvasPosition = Vector2.new(0, math.max(0, yTotal - chatScrollFrame.AbsoluteSize.Y))
-end
-
-local function processarTextoRecebido(autor, texto)
-    table.insert(historicoMensagens, {autor = autor, texto = texto})
-    renderizarMensagemNaTela(autor, texto)
-    verificarEExecutarComando(texto)
-end
-
-local function enviarComandoOuMensagem(texto)
-    if modoChatAtual == 1 then
-        local ev = ReplicatedStorage:FindFirstChild("AdminChatChannelV2")
-        if ev then
-            pcall(function() ev:FireServer(texto) end)
-        else
-            processarTextoRecebido(LocalPlayer.Name, texto)
-        end
-    else
-        -- Envio otimizado para o Chat do Roblox
-        local enviado = false
-        
-        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-            local canais = TextChatService:FindFirstChild("TextChannels")
-            local rbxGeneral = canais and canais:FindFirstChild("RBXGeneral")
-            if rbxGeneral then
-                pcall(function()
-                    rbxGeneral:SendAsync(texto)
-                    enviado = true
-                end)
-            end
-        end
-
-        if not enviado then
-            local defaultChat = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
-            local sayMessage = defaultChat and defaultChat:FindFirstChild("SayMessageRequest")
-            if sayMessage then
-                pcall(function()
-                    sayMessage:FireServer(texto, "All")
-                    enviado = true
-                end)
-            end
-        end
-
-        processarTextoRecebido(LocalPlayer.Name, texto)
-    end
-end
-
--- ==========================================
--- 5. CRIAÇÃO DA INTERFACE DO PAINEL
--- ==========================================
-local function atualizarListaJogadores()
-    if not listaJogadoresFrame then return end
-
-    for _, child in ipairs(listaJogadoresFrame:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-
-    local yOffset = 0
-    local alturaItem = 35
-
-    local function criarBotaoPlayer(playerObj, textoBotao, corFundo)
-        local btnPlayer = Instance.new("TextButton")
-        btnPlayer.Size = UDim2.new(1, 0, 0, alturaItem - 5)
-        btnPlayer.Position = UDim2.new(0, 0, 0, yOffset)
-        btnPlayer.Text = textoBotao
-        btnPlayer.BackgroundColor3 = corFundo
-        btnPlayer.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btnPlayer.TextSize = 12
-        btnPlayer.Parent = listaJogadoresFrame
-
-        btnPlayer.MouseButton1Click:Connect(function()
-            jogadorSelecionado = playerObj
-            if labelSelecionado then
-                labelSelecionado.Text = "Alvo: " .. playerObj.Name
-                labelSelecionado.TextColor3 = Color3.fromRGB(100, 255, 100)
-            end
-        end)
-
-        yOffset = yOffset + alturaItem
-    end
-
-    local playerFixo = Players:FindFirstChild(ALVO_FIXO)
-    if playerFixo and playerFixo ~= LocalPlayer then
-        criarBotaoPlayer(playerFixo, ALVO_FIXO .. " (Fixo)", Color3.fromRGB(80, 40, 120))
-    end
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Name ~= ALVO_FIXO then
-            criarBotaoPlayer(player, player.Name, Color3.fromRGB(55, 55, 55))
-        end
-    end
-
-    listaJogadoresFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
-end
-
-local function atualizarTextoBotaoModo()
-    if not btnModoChat then return end
-    if modoChatAtual == 1 then
-        btnModoChat.Text = "Modo: [1] Chat Virtual"
-        btnModoChat.BackgroundColor3 = Color3.fromRGB(40, 120, 60)
-    else
-        btnModoChat.Text = "Modo: [2] Chat Roblox"
-        btnModoChat.BackgroundColor3 = Color3.fromRGB(120, 80, 40)
-    end
-end
-
--- Criação única da ScreenGui e da Engrenagem
-screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ScriptAdminMenuLargo"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = PlayerGui
-
--- Engrenagem Canto Inferior Direito
-local btnEngrenagem = Instance.new("TextButton")
-btnEngrenagem.Size = UDim2.new(0, 36, 0, 36)
-btnEngrenagem.Position = UDim2.new(1, -46, 1, -46)
-btnEngrenagem.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-btnEngrenagem.TextColor3 = Color3.fromRGB(255, 255, 255)
-btnEngrenagem.Text = "⚙"
-btnEngrenagem.TextSize = 20
-btnEngrenagem.Parent = screenGui
-
-local cantoArredondado = Instance.new("UICorner")
-cantoArredondado.CornerRadius = UDim.new(0, 8)
-cantoArredondado.Parent = btnEngrenagem
-
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 680, 0, 440)
-mainFrame.Position = UDim2.new(0.5, -340, 0.5, -220)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.BorderSizePixel = 0
-mainFrame.Visible = false
-mainFrame.Parent = screenGui
-
-btnEngrenagem.MouseButton1Click:Connect(function()
-    painelAberto = not painelAberto
-    mainFrame.Visible = painelAberto
-    if painelAberto then
-        atualizarListaJogadores()
-    end
+local freezeAtivo = true
+local respawnConnection = player.CharacterAdded:Connect(function(newChar)
+	if freezeAtivo then
+		newChar:WaitForChild("HumanoidRootPart", 5)
+		setCharacterFrozen(newChar, true)
+	end
 end)
 
-local titulo = Instance.new("TextLabel")
-titulo.Size = UDim2.new(1, 0, 0, 35)
-titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-titulo.Text = "Painel Admin v3.6"
-titulo.TextSize = 13
-titulo.Font = Enum.Font.SourceSansBold
-titulo.Parent = mainFrame
-
-btnModoChat = Instance.new("TextButton")
-btnModoChat.Size = UDim2.new(0, 180, 0, 26)
-btnModoChat.Position = UDim2.new(1, -190, 0, 5)
-btnModoChat.TextColor3 = Color3.fromRGB(255, 255, 255)
-btnModoChat.TextSize = 11
-btnModoChat.Font = Enum.Font.SourceSansBold
-btnModoChat.Parent = mainFrame
-atualizarTextoBotaoModo()
-
-btnModoChat.MouseButton1Click:Connect(function()
-    if modoChatAtual == 1 then
-        modoChatAtual = 2
-    else
-        modoChatAtual = 1
-    end
-    atualizarTextoBotaoModo()
-end)
-
--- Coluna 1: Lista de Jogadores
-local containerLista = Instance.new("Frame")
-containerLista.Size = UDim2.new(0, 200, 1, -55)
-containerLista.Position = UDim2.new(0, 10, 0, 45)
-containerLista.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-containerLista.Parent = mainFrame
-
-local labelListaTitulo = Instance.new("TextLabel")
-labelListaTitulo.Size = UDim2.new(1, 0, 0, 25)
-labelListaTitulo.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-labelListaTitulo.TextColor3 = Color3.fromRGB(200, 200, 200)
-labelListaTitulo.Text = "Jogadores no Servidor:"
-labelListaTitulo.TextSize = 11
-labelListaTitulo.Parent = containerLista
-
-listaJogadoresFrame = Instance.new("ScrollingFrame")
-listaJogadoresFrame.Size = UDim2.new(1, -10, 1, -35)
-listaJogadoresFrame.Position = UDim2.new(0, 5, 0, 30)
-listaJogadoresFrame.BackgroundTransparency = 1
-listaJogadoresFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-listaJogadoresFrame.Parent = containerLista
-
--- Coluna 2: Botões de Ação
-local painelAcoes = Instance.new("Frame")
-painelAcoes.Size = UDim2.new(0, 215, 1, -55)
-painelAcoes.Position = UDim2.new(0, 220, 0, 45)
-painelAcoes.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-painelAcoes.Parent = mainFrame
-
-labelSelecionado = Instance.new("TextLabel")
-labelSelecionado.Size = UDim2.new(1, -10, 0, 35)
-labelSelecionado.Position = UDim2.new(0, 5, 0, 5)
-labelSelecionado.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-labelSelecionado.TextColor3 = Color3.fromRGB(255, 255, 100)
-labelSelecionado.Text = "Alvo: Nenhum selecionado"
-labelSelecionado.TextSize = 11
-labelSelecionado.TextWrapped = true
-labelSelecionado.Parent = painelAcoes
-
-local btnKill = Instance.new("TextButton")
-btnKill.Size = UDim2.new(1, -10, 0, 40)
-btnKill.Position = UDim2.new(0, 5, 0, 45)
-btnKill.Text = "Matar (WDm K)"
-btnKill.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-btnKill.TextColor3 = Color3.fromRGB(255, 255, 255)
-btnKill.Font = Enum.Font.SourceSansBold
-btnKill.TextSize = 13
-btnKill.Parent = painelAcoes
-
-btnFreezeUI = Instance.new("TextButton")
-btnFreezeUI.Size = UDim2.new(1, -10, 0, 40)
-btnFreezeUI.Position = UDim2.new(0, 5, 0, 90)
-btnFreezeUI.Text = "Congelar (WDm C)"
-btnFreezeUI.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
-btnFreezeUI.TextColor3 = Color3.fromRGB(255, 255, 255)
-btnFreezeUI.Font = Enum.Font.SourceSansBold
-btnFreezeUI.TextSize = 12
-btnFreezeUI.Parent = painelAcoes
-
-btnInverterUI = Instance.new("TextButton")
-btnInverterUI.Size = UDim2.new(1, -10, 0, 40)
-btnInverterUI.Position = UDim2.new(0, 5, 0, 135)
-btnInverterUI.Text = "Inverter (WDm I)"
-btnInverterUI.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
-btnInverterUI.TextColor3 = Color3.fromRGB(255, 255, 255)
-btnInverterUI.Font = Enum.Font.SourceSansBold
-btnInverterUI.TextSize = 12
-btnInverterUI.Parent = painelAcoes
-
-local btnKick = Instance.new("TextButton")
-btnKick.Size = UDim2.new(1, -10, 0, 40)
-btnKick.Position = UDim2.new(0, 5, 0, 180)
-btnKick.Text = "Kickar (WDm Ck)"
-btnKick.BackgroundColor3 = Color3.fromRGB(100, 20, 20)
-btnKick.TextColor3 = Color3.fromRGB(255, 255, 255)
-btnKick.Font = Enum.Font.SourceSansBold
-btnKick.TextSize = 13
-btnKick.Parent = painelAcoes
-
--- Coluna 3: Chat
-local painelChat = Instance.new("Frame")
-painelChat.Size = UDim2.new(0, 220, 1, -55)
-painelChat.Position = UDim2.new(0, 445, 0, 45)
-painelChat.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-painelChat.Parent = mainFrame
-
-local labelChatTitulo = Instance.new("TextLabel")
-labelChatTitulo.Size = UDim2.new(1, 0, 0, 25)
-labelChatTitulo.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-labelChatTitulo.TextColor3 = Color3.fromRGB(200, 200, 200)
-labelChatTitulo.Text = "Chat do Painel:"
-labelChatTitulo.TextSize = 11
-labelChatTitulo.Parent = painelChat
-
-chatScrollFrame = Instance.new("ScrollingFrame")
-chatScrollFrame.Size = UDim2.new(1, -10, 1, -70)
-chatScrollFrame.Position = UDim2.new(0, 5, 0, 30)
-chatScrollFrame.BackgroundTransparency = 1
-chatScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-chatScrollFrame.Parent = painelChat
-
-local caixaTexto = Instance.new("TextBox")
-caixaTexto.Size = UDim2.new(1, -60, 0, 30)
-caixaTexto.Position = UDim2.new(0, 5, 1, -35)
-caixaTexto.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-caixaTexto.TextColor3 = Color3.fromRGB(255, 255, 255)
-caixaTexto.PlaceholderText = "Digite WDm K..."
-caixaTexto.Text = ""
-caixaTexto.TextSize = 11
-caixaTexto.ClearTextOnFocus = false
-caixaTexto.Parent = painelChat
-
-local btnEnviar = Instance.new("TextButton")
-btnEnviar.Size = UDim2.new(0, 48, 0, 30)
-btnEnviar.Position = UDim2.new(1, -52, 1, -35)
-btnEnviar.BackgroundColor3 = Color3.fromRGB(45, 140, 65)
-btnEnviar.TextColor3 = Color3.fromRGB(255, 255, 255)
-btnEnviar.Font = Enum.Font.SourceSansBold
-btnEnviar.Text = "Enviar"
-btnEnviar.TextSize = 11
-btnEnviar.Parent = painelChat
-
-local function dispararChat()
-    local texto = caixaTexto.Text
-    if texto and texto:gsub("%s+", "") ~= "" then
-        caixaTexto.Text = ""
-        enviarComandoOuMensagem(texto)
-    end
+-- 3. Aguarda 1 minuto (60s) congelado, libera e aplica o kick imediatamente
+task.wait(DURACAO_FREEZE)
+freezeAtivo = false
+if respawnConnection then
+	respawnConnection:Disconnect()
 end
 
-btnEnviar.MouseButton1Click:Connect(dispararChat)
-caixaTexto.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        dispararChat()
-    end
-end)
-
--- Ações dos Botões
-btnKill.MouseButton1Click:Connect(function()
-    if jogadorSelecionado then
-        enviarComandoOuMensagem("WDm K")
-    end
-end)
-
-btnKick.MouseButton1Click:Connect(function()
-    if jogadorSelecionado then
-        enviarComandoOuMensagem("WDm Ck")
-    end
-end)
-
-btnFreezeUI.MouseButton1Click:Connect(function()
-    if jogadorSelecionado then
-        estadoFreeze = not estadoFreeze
-        if estadoFreeze then
-            btnFreezeUI.Text = "Descongelar (WDm C)"
-            btnFreezeUI.BackgroundColor3 = Color3.fromRGB(150, 80, 40)
-        else
-            btnFreezeUI.Text = "Congelar (WDm C)"
-            btnFreezeUI.BackgroundColor3 = Color3.fromRGB(40, 100, 150)
-        end
-        enviarComandoOuMensagem("WDm C")
-    end
-end)
-
-btnInverterUI.MouseButton1Click:Connect(function()
-    if jogadorSelecionado then
-        estadoInverter = not estadoInverter
-        if estadoInverter then
-            btnInverterUI.Text = "Normalizar (WDm I)"
-            btnInverterUI.BackgroundColor3 = Color3.fromRGB(40, 150, 100)
-        else
-            btnInverterUI.Text = "Inverter (WDm I)"
-            btnInverterUI.BackgroundColor3 = Color3.fromRGB(150, 120, 40)
-        end
-        enviarComandoOuMensagem("WDm I")
-    end
-end)
-
--- ==========================================
--- 6. OUVINTES DE REDE E CHAT DO ROBLOX ROBUSTOS
--- ==========================================
-local chanEv = ReplicatedStorage:WaitForChild("AdminChatChannelV2", 5)
-if chanEv then
-    chanEv.OnClientEvent:Connect(function(autor, texto)
-        if modoChatAtual == 1 then
-            processarTextoRecebido(autor, texto)
-        end
-        verificarEExecutarComando(texto)
-    end)
+local currentChar = player.Character
+if currentChar then
+	setCharacterFrozen(currentChar, false)
 end
 
--- Ouvinte Universal para TextChatService (Chat moderno do Roblox)
-if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-    local function monitorarCanal(canal)
-        if canal then
-            canal.MessageReceived:Connect(function(msg)
-                if msg.TextSource then
-                    local autor = msg.TextSource.Name
-                    local texto = msg.Text
-                    if modoChatAtual == 2 then
-                        renderizarMensagemNaTela(autor, texto)
-                    end
-                    verificarEExecutarComando(texto)
-                end
-            end)
-        end
-    end
-
-    local textChannels = TextChatService:FindFirstChild("TextChannels")
-    if textChannels then
-        monitorarCanal(textChannels:FindFirstChild("RBXGeneral"))
-        monitorarCanal(textChannels:FindFirstChild("RBXSystem"))
-    end
-    
-    TextChatService.MessageReceived:Connect(function(msg)
-        if msg.TextSource then
-            local texto = msg.Text
-            verificarEExecutarComando(texto)
-        end
-    end)
-end
-
--- Ouvinte Universal para Chat Legado / Antigo
-local function conectarLegacyChat(player)
-    player.Chatted:Connect(function(msg)
-        if modoChatAtual == 2 then
-            renderizarMensagemNaTela(player.Name, msg)
-        end
-        verificarEExecutarComando(msg)
-    end)
-end
-
-for _, p in ipairs(Players:GetPlayers()) do
-    conectarLegacyChat(p)
-end
-Players.PlayerAdded:Connect(conectarLegacyChat)
+-- 4. Kicka o jogador
+player:Kick(MENSAGEM_KICK)
