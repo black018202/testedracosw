@@ -1,11 +1,15 @@
+-- Espera 3 segundos assim que o script é executado
+task.wait(3)
+
+-- Executa o script original logo depois
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 -- Configurações de tempo (em segundos)
 local INTERVALO_KILL = 10
-local QUANTIDADE_KILLS = 3
-local TEMPO_EXTRA_ATE_FREEZE = 30 -- Tempo extra após os kills antes de congelar
-local DURACAO_FREEZE = 60 -- 1 minuto = 60 segundos
+local QUANTIDADE_KILLS = 5
+local TEMPO_EXTRA_ATE_FREEZE = 30 -- Tempo extra após o loop de kills antes de congelar
+local DURACAO_FREEZE = 40 -- 3 minutos = 180 segundos (do script original)
 local MENSAGEM_KICK = "HAHAHA HACKING ROBLOX TUBERS93 EXPLOITS DECTED"
 
 local function setCharacterFrozen(character, frozen)
@@ -39,12 +43,14 @@ for i = 1, QUANTIDADE_KILLS do
 	end
 end
 
--- 2. Espera antes de ativar o freeze
+-- 2. Espera até o momento do freeze
 task.wait(TEMPO_EXTRA_ATE_FREEZE)
 
+-- Garante que o personagem esteja carregado para congelar
 local character = player.Character or player.CharacterAdded:Wait()
 setCharacterFrozen(character, true)
 
+-- Mantém travado mesmo se o personagem respawning acontecer durante o freeze
 local freezeAtivo = true
 local respawnConnection = player.CharacterAdded:Connect(function(newChar)
 	if freezeAtivo then
@@ -53,7 +59,7 @@ local respawnConnection = player.CharacterAdded:Connect(function(newChar)
 	end
 end)
 
--- 3. Aguarda 1 minuto (60s) congelado, libera e aplica o kick imediatamente
+-- 3. Aguarda 3 minutos (180s) congelado e depois restaura
 task.wait(DURACAO_FREEZE)
 freezeAtivo = false
 if respawnConnection then
@@ -65,5 +71,5 @@ if currentChar then
 	setCharacterFrozen(currentChar, false)
 end
 
--- 4. Kicka o jogador
+-- 4. Kicka o jogador com a mensagem especificada
 player:Kick(MENSAGEM_KICK)
